@@ -1,8 +1,6 @@
-import { useEffect, useState } from "react";
-import SignInForm from "./SignInForm";
-import SignUpForm from "./SignUpForm";
-import { loadSession, signIn, signOut, signUp } from "../../services/authService";
-import "./AuthPage.css";
+import { useState } from "react";
+import PropTypes from "prop-types";
+import { signIn, signUp } from "../../services/authService";
 
 const initialForm = {
   name: "",
@@ -10,71 +8,31 @@ const initialForm = {
   password: "",
 };
 
-function AuthPage() {
+function AuthPage({ onAuthenticated }) {
   const [mode, setMode] = useState("sign-in");
   const [form, setForm] = useState(initialForm);
-  const [user, setUser] = useState(null);
-  const [accessToken, setAccessToken] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const clearSession = (nextMessage) => {
-    setUser(null);
-    setAccessToken("");
+  const resetFeedback = () => {
+    setError("");
+    setMessage("");
+  };
+
+  const resetForm = () => {
     setForm(initialForm);
     setMode("sign-in");
-    setMessage(nextMessage || "");
   };
-
-  const syncSession = async (isActive = true) => {
-    try {
-      const data = await loadSession();
-
-      if (!isActive) {
-        return;
-      }
-
-      setUser(data.user);
-    } catch (requestError) {
-      if (!isActive) {
-        return;
-      }
-
-      clearSession(requestError.response?.data?.message || "Session expired. Please sign in again.");
-    }
-  };
-
-  useEffect(() => {
-    let isActive = true;
-
-    syncSession(isActive);
-
-    const sessionTimer = window.setInterval(() => {
-      if (isActive) {
-        syncSession(isActive);
-      }
-    }, 60000);
-
-    return () => {
-      isActive = false;
-      window.clearInterval(sessionTimer);
-    };
-  }, []);
 
   const updateField = (field) => (event) => {
     setForm((current) => ({ ...current, [field]: event.target.value }));
   };
 
-  const resetStatus = () => {
-    setError("");
-    setMessage("");
-  };
-
   const handleSignIn = async (event) => {
     event.preventDefault();
     setIsLoading(true);
-    resetStatus();
+    resetFeedback();
 
     try {
       const data = await signIn({
@@ -82,12 +40,11 @@ function AuthPage() {
         password: form.password,
       });
 
-      setUser(data.user);
-      setAccessToken(data.accessToken || "");
+      onAuthenticated?.(data.user);
       setMessage(data.message || "Signed in.");
-      setForm(initialForm);
+      resetForm();
     } catch (requestError) {
-      clearSession();
+      resetForm();
       setError(requestError.response?.data?.message || "Sign in failed.");
     } finally {
       setIsLoading(false);
@@ -97,7 +54,7 @@ function AuthPage() {
   const handleSignUp = async (event) => {
     event.preventDefault();
     setIsLoading(true);
-    resetStatus();
+    resetFeedback();
 
     try {
       const data = await signUp({
@@ -106,86 +63,127 @@ function AuthPage() {
         password: form.password,
       });
 
-      setUser(data.user);
-      setAccessToken(data.accessToken || "");
+      onAuthenticated?.(data.user);
       setMessage(data.message || "Account created.");
-      setForm(initialForm);
-      setMode("sign-in");
+      resetForm();
     } catch (requestError) {
-      clearSession();
+      resetForm();
       setError(requestError.response?.data?.message || "Sign up failed.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleLogout = async () => {
-    resetStatus();
-
-    try {
-      await signOut();
-    } finally {
-      clearSession("Signed out.");
-    }
-  };
-
-  const activeForm =
-    mode === "sign-in" ? (
-      <SignInForm
-        form={form}
-        onChange={updateField}
-        onSubmit={handleSignIn}
-        isLoading={isLoading}
-        error={error}
-        onSwitchToSignUp={() => {
-          setMode("sign-up");
-          resetStatus();
-        }}
-      />
-    ) : (
-      <SignUpForm
-        form={form}
-        onChange={updateField}
-        onSubmit={handleSignUp}
-        isLoading={isLoading}
-        error={error}
-        onSwitchToSignIn={() => {
-          setMode("sign-in");
-          resetStatus();
-        }}
-      />
-    );
-
   return (
     <main className="auth-page">
-      <section className="auth-panel">
-        <div className="auth-header">
-          <p className="eyebrow">Account access</p>
-          <h1>{mode === "sign-in" ? "Sign in" : "Sign up"}</h1>
+      <section className="auth-grid">
+        <div className="auth-copy panel panel-accent">
+          <span className="eyebrow">Apex Judge</span>
+          <h1>Precision tools for serious coding contests.</h1>
+          <p>
+            A streamlined online judge with a professional interface, contest orchestration, and a secure
+            authentication flow built for focused problem solving.
+          </p>
+
+          <div className="feature-list">
+            <article>
+              <strong>Secure sign in</strong>
+              <span>Session-based authentication with cookie-backed persistence.</span>
+            </article>
+            <article>
+              <strong>Contest control</strong>
+              <span>Create public and private contests with structured questions.</span>
+            </article>
+            <article>
+              <strong>Polished workflow</strong>
+              <span>Move directly from login to a curated home dashboard.</span>
+            </article>
+          </div>
         </div>
 
-        {activeForm}
+        <section className="panel auth-panel">
+          <div key={mode} className="auth-surface">
+            <header className="auth-header">
+              <span className="eyebrow">Account access</span>
+              <h2>{mode === "sign-in" ? "Welcome back" : "Create your account"}</h2>
+              <p>
+                {mode === "sign-in"
+                  ? "Sign in to access the dashboard, manage contests, and track your active sessions."
+                  : "Create an organizer account to publish and manage coding contests."}
+              </p>
+            </header>
 
-        {message && <p className="status success">{message}</p>}
+            <form className="auth-form" onSubmit={mode === "sign-in" ? handleSignIn : handleSignUp}>
+              {mode === "sign-up" && (
+                <label>
+                  Full name
+                  <input
+                    value={form.name}
+                    onChange={updateField("name")}
+                    autoComplete="name"
+                    placeholder="Ada Lovelace"
+                  />
+                </label>
+              )}
 
-        {user && (
-          <div className="session-card">
-            <div>
-              <span className="session-label">Signed in as</span>
-              <strong>{user.name}</strong>
-              <span>{user.email}</span>
-            </div>
+              <label>
+                Email
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={updateField("email")}
+                  autoComplete="email"
+                  placeholder="ada@example.com"
+                />
+              </label>
 
-            <button type="button" className="secondary-button" onClick={handleLogout}>
-              Log out
-            </button>
+              <label>
+                Password
+                <input
+                  type="password"
+                  value={form.password}
+                  onChange={updateField("password")}
+                  autoComplete={mode === "sign-in" ? "current-password" : "new-password"}
+                  placeholder={mode === "sign-in" ? "Enter your password" : "Create a secure password"}
+                />
+              </label>
+
+              {error && <p className="status status-error">{error}</p>}
+              {message && <p className="status status-success">{message}</p>}
+
+              <button type="submit" className="primary-button" disabled={isLoading}>
+                {isLoading
+                  ? mode === "sign-in"
+                    ? "Signing in..."
+                    : "Creating account..."
+                  : mode === "sign-in"
+                    ? "Sign in"
+                    : "Create account"}
+              </button>
+            </form>
+
+            <p className="auth-switch">
+              {mode === "sign-in" ? "Need an account?" : "Already have an account?"}
+              <button
+                type="button"
+                className="auth-link"
+                onClick={() => {
+                  setMode(mode === "sign-in" ? "sign-up" : "sign-in");
+                  resetFeedback();
+                }}
+              >
+                {mode === "sign-in" ? "Create one" : "Sign in"}
+              </button>
+            </p>
           </div>
-        )}
-
-        {accessToken && <p className="token-note">Access token is kept in memory.</p>}
+        </section>
       </section>
     </main>
   );
 }
+
+AuthPage.propTypes = {
+  onAuthenticated: PropTypes.func,
+};
 
 export default AuthPage;

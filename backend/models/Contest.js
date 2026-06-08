@@ -42,6 +42,21 @@ const questionSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const participantSchema = new mongoose.Schema(
+  {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+    joinedAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  { _id: false }
+);
+
 const contestSchema = new mongoose.Schema(
   {
     roomCode: {
@@ -67,6 +82,11 @@ const contestSchema = new mongoose.Schema(
       enum: ["public", "private"],
       default: "public",
     },
+    status: {
+      type: String,
+      enum: ["ready", "live", "ended"],
+      default: "ready",
+    },
     durationMinutes: {
       type: Number,
       required: true,
@@ -78,12 +98,24 @@ const contestSchema = new mongoose.Schema(
     },
     endAt: {
       type: Date,
-      required: true,
+      default: null,
+    },
+    actualStartAt: {
+      type: Date,
+      default: null,
+    },
+    actualEndAt: {
+      type: Date,
+      default: null,
     },
     questions: {
       type: [questionSchema],
       validate: [(value) => value.length > 0, "At least one question is required."],
       required: true,
+    },
+    participants: {
+      type: [participantSchema],
+      default: [],
     },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
@@ -97,8 +129,8 @@ const contestSchema = new mongoose.Schema(
 );
 
 contestSchema.pre("validate", function contestDurationHook(next) {
-  if (this.startAt && this.durationMinutes) {
-    this.endAt = new Date(this.startAt.getTime() + this.durationMinutes * 60 * 1000);
+  if (this.actualStartAt && this.durationMinutes) {
+    this.endAt = new Date(this.actualStartAt.getTime() + this.durationMinutes * 60 * 1000);
   }
 
   next();

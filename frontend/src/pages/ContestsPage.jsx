@@ -118,6 +118,10 @@ function ContestsPage() {
       setJoinMessage(data.message || "Joined contest successfully.");
       setJoinCode("");
       setShowJoiner(false);
+      
+      if (data.contest?._id) {
+        navigate(`/contests/${data.contest._id}`);
+      }
     } catch (requestError) {
       setJoinError(requestError.response?.data?.message || "Unable to join the contest room.");
     } finally {
@@ -136,6 +140,7 @@ function ContestsPage() {
       setJoinedContest(data.contest || null);
       setJoinMessage(data.message || "Joined contest successfully.");
       setShowJoiner(false);
+      navigate(`/contests/${contestId}`);
     } catch (requestError) {
       setJoinError(requestError.response?.data?.message || "Unable to join the contest room.");
       setShowJoiner(true);
@@ -271,7 +276,11 @@ function ContestsPage() {
               const canJoinDirectly = contest.visibility === "public";
 
               return (
-                <article className="contest-card" key={contest._id}>
+                <article 
+                  className="contest-card clickable-card" 
+                  key={contest._id}
+                  onClick={() => canJoinDirectly ? joinPublicContest(contest._id) : setShowJoiner(true)}
+                >
                   <div className="contest-card-head">
                     <span className={contest.visibility === "public" ? "visibility-badge public" : "visibility-badge private"}>
                       {contest.visibility === "public" ? "Public room" : "Private room"}
@@ -306,7 +315,6 @@ function ContestsPage() {
                     <button
                       type="button"
                       className="primary-button inline-button"
-                      onClick={() => (canJoinDirectly ? joinPublicContest(contest._id) : setShowJoiner(true))}
                       disabled={isJoining}
                     >
                       {canJoinDirectly ? "Join room" : "Join with code"}

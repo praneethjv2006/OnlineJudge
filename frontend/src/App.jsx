@@ -12,6 +12,7 @@ import AuthPage from "./components/auth/AuthPage";
 import NavBar from "./components/layout/NavBar";
 import CreateContestPage from "./pages/CreateContestPage";
 import ContestsPage from "./pages/ContestsPage";
+import ContestRoomPage from "./pages/ContestRoomPage";
 import HomePage from "./pages/HomePage";
 import { loadSession, signOut } from "./services/authService";
 
@@ -104,6 +105,7 @@ function AppRoutes() {
         <Route path="/home" element={<HomePage />} />
         <Route path="/contests" element={<ContestsPage />} />
         <Route path="/contests/create" element={<CreateContestPage />} />
+        <Route path="/contests/:contestId" element={<ContestRoomPage />} />
       </Route>
       <Route path="*" element={<Navigate to={user ? "/home" : "/auth"} replace />} />
     </Routes>

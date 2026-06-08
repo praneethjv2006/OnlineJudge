@@ -10,14 +10,6 @@ function ProfileIcon() {
   );
 }
 
-function MailIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="M4 6h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Zm0 2v.25l8 5.25 8-5.25V8H4Zm16 8V10.6l-7.45 4.9a1 1 0 0 1-1.1 0L4 10.6V16h16Z" />
-    </svg>
-  );
-}
-
 function SignOutIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -93,10 +85,7 @@ function NavBar({ user, onSignOut }) {
             <div className="profile-menu-head">
               <span className="profile-menu-title">Signed in as</span>
               <strong>{user?.name || "User"}</strong>
-              <div className="profile-menu-row">
-                <MailIcon />
-                <span>{user?.email || "Active session"}</span>
-              </div>
+              <span className="profile-menu-email">{user?.email || "Active session"}</span>
             </div>
 
             <button type="button" className="profile-menu-action" onClick={handleSignOut}>

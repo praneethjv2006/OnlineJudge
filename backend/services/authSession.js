@@ -9,7 +9,7 @@ const cookieOptions = {
   httpOnly: true,
   sameSite: "lax",
   secure: process.env.NODE_ENV === "production",
-  path: "/api/auth",
+  path: "/",
 };
 
 const buildTokens = (user) => {
@@ -52,5 +52,6 @@ module.exports = {
   cookieOptions,
   safeUser,
   setRefreshCookie,
+  accessTokenSecret,
   refreshTokenSecret,
 };

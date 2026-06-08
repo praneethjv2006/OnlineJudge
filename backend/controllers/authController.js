@@ -4,26 +4,40 @@ const User = require("../models/User");
 const {
   buildTokens,
   clearRefreshCookie,
+  accessTokenSecret,
   refreshTokenSecret,
   safeUser,
   setRefreshCookie,
 } = require("../services/authSession");
 
 const resolveSessionUser = async (req) => {
-  const token = req.cookies?.refreshToken;
+  const authHeader = req.headers.authorization || "";
+  const bearerToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  const refreshToken = req.cookies?.refreshToken;
 
-  if (!token) {
+  if (!bearerToken && !refreshToken) {
     return null;
   }
 
-  const payload = jwt.verify(token, refreshTokenSecret);
+  if (bearerToken) {
+    const payload = jwt.verify(bearerToken, accessTokenSecret);
+    const user = await User.findById(payload.id);
+
+    if (!user) {
+      return null;
+    }
+
+    return { token: bearerToken, user };
+  }
+
+  const payload = jwt.verify(refreshToken, refreshTokenSecret);
   const user = await User.findById(payload.id);
 
-  if (!user || user.refreshToken !== token) {
+  if (!user || user.refreshToken !== refreshToken) {
     return null;
   }
 
-  return { token, user };
+  return { token: refreshToken, user };
 };
 
 const signIn = async (req, res) => {

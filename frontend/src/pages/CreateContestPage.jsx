@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, useOutletContext } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { createContest } from "../services/contestService";
 
 const createTestCase = () => ({
@@ -23,7 +23,6 @@ const createContestDraft = () => ({
 });
 
 function CreateContestPage() {
-  const { user } = useOutletContext();
   const navigate = useNavigate();
   const [draft, setDraft] = useState(createContestDraft);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -129,7 +128,14 @@ function CreateContestPage() {
 
     try {
       const data = await createContest(draft);
-      setCreatedContest(data.contest || null);
+      const contest = data.contest || null;
+
+      if (contest?._id) {
+        navigate(`/contests/${contest._id}`);
+        return;
+      }
+
+      setCreatedContest(contest);
       setDraft(createContestDraft());
     } catch (requestError) {
       setError(requestError.response?.data?.message || "Contest creation failed.");
@@ -144,23 +150,6 @@ function CreateContestPage() {
         <span aria-hidden="true">←</span>
         Back
       </button>
-
-      <section className="panel create-hero">
-        <div>
-          <span className="eyebrow">Contest studio</span>
-          <h1>Create contest</h1>
-          <p>
-            Build a professional contest room with structured questions, per-question runtime, and explicit
-            test cases. Use the sections below to expand only what you need while you write.
-          </p>
-        </div>
-
-        <div className="create-hero-chip">
-          <span className="card-kicker">Organizer</span>
-          <strong>{user?.name || "Organizer"}</strong>
-          <span className="muted-copy">Use the form as a compact contest blueprint.</span>
-        </div>
-      </section>
 
       {createdContest && (
         <section className="panel create-success-banner">

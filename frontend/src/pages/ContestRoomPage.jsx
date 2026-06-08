@@ -1,6 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams, useOutletContext } from "react-router-dom";
-import { endContest, enterContest, loadContest, runContestCode, startContest } from "../services/contestService";
+import { 
+  getContestSubmissions, 
+  loadContest, 
+  runContestCode, 
+  startContest,
+  endContest
+} from "../services/contestService";
 import Editor from "@monaco-editor/react";
 import { 
   FileText, 
@@ -10,16 +16,15 @@ import {
   RotateCcw, 
   Trophy, 
   Clock, 
-  ArrowLeft,
   ChevronRight,
   ChevronLeft,
   Terminal,
   CheckCircle2,
   XCircle,
-  AlertCircle,
   Play,
   Send,
-  Layout
+  History,
+  ArrowLeft
 } from "lucide-react";
 
 const LANGUAGE_OPTIONS = [
@@ -87,14 +92,35 @@ function ContestRoomPage() {
   const [language, setLanguage] = useState("cpp");
   const [code, setCode] = useState(DEFAULT_CODE_TEMPLATES.cpp);
   const [runResults, setRunResults] = useState([]);
-  const [terminalOutput, setTerminalOutput] = useState("");
   const [isRunning, setIsRunning] = useState(false);
   const [nowTick, setNowTick] = useState(Date.now());
-  const [isFullscreen, setIsFullscreen] = useState(true); 
+  const [isFullscreen] = useState(true); 
   const [testCaseStatuses, setTestCaseStatuses] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isConsoleExpanded, setIsConsoleExpanded] = useState(false);
   const [selectedTestCase, setSelectedTestCase] = useState(0);
+  const [leftWidth, setLeftWidth] = useState(50); // percentage
+  const [isResizing, setIsResizing] = useState(false);
+  const [submissions, setSubmissions] = useState([]);
+  const [isSubmissionsLoading, setIsSubmissionsLoading] = useState(false);
+
+  const fetchSubmissions = useCallback(async () => {
+    setIsSubmissionsLoading(true);
+    try {
+      const data = await getContestSubmissions(contestId);
+      setSubmissions(data.submissions || []);
+    } catch {
+      // Failed to load submissions
+    } finally {
+      setIsSubmissionsLoading(false);
+    }
+  }, [contestId]);
+
+  useEffect(() => {
+    if (leftTab === 'submissions') {
+      fetchSubmissions();
+    }
+  }, [leftTab, fetchSubmissions]);
 
   useEffect(() => {
     let isMounted = true;
@@ -106,7 +132,7 @@ function ContestRoomPage() {
           setContest(data.contest);
           setSelectedQuestionIndex(0);
         }
-      } catch (err) {
+      } catch {
         if (isMounted) setError("Failed to load contest.");
       } finally {
         if (isMounted) setIsLoading(false);
@@ -115,6 +141,36 @@ function ContestRoomPage() {
     fetchContest();
     return () => { isMounted = false; };
   }, [contestId]);
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!isResizing) return;
+      const newWidth = (e.clientX / window.innerWidth) * 100;
+      if (newWidth > 20 && newWidth < 80) {
+        setLeftWidth(newWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      document.body.classList.remove('is-resizing');
+    };
+
+    if (isResizing) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing]);
+
+  const startResizing = () => {
+    setIsResizing(true);
+    document.body.classList.add('is-resizing');
+  };
 
   useEffect(() => {
     const interval = window.setInterval(() => setNowTick(Date.now()), 1000);
@@ -141,7 +197,6 @@ function ContestRoomPage() {
     if (!currentQuestion || !canRun) return;
     setIsRunning(true);
     setIsConsoleExpanded(true);
-    setTerminalOutput("Running test cases...");
     
     try {
       const data = await runContestCode(contestId, {
@@ -150,14 +205,13 @@ function ContestRoomPage() {
         questionIndex: selectedQuestionIndex,
       });
       setRunResults(data.results || []);
-      setTerminalOutput(data.terminalOutput || "");
       const newStatuses = {};
       (data.results || []).forEach((res, idx) => {
         newStatuses[idx] = { status: res.verdict === 'Accepted' ? 'passed' : 'failed' };
       });
       setTestCaseStatuses(newStatuses);
-    } catch (err) {
-      setTerminalOutput("Execution error.");
+    } catch {
+      // Execution error
     } finally {
       setIsRunning(false);
     }
@@ -168,19 +222,42 @@ function ContestRoomPage() {
     if (!window.confirm("Submit your solution?")) return;
     setIsSubmitting(true);
     setIsConsoleExpanded(true);
-    setTerminalOutput("Submitting...");
     try {
       const data = await runContestCode(contestId, {
         code,
         language,
         questionIndex: selectedQuestionIndex,
+        isSubmit: true,
       });
       setRunResults(data.results || []);
       alert("Submitted successfully!");
-    } catch (err) {
+      fetchSubmissions();
+    } catch {
       alert("Submission failed.");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleStartContest = async () => {
+    if (!window.confirm("Start the contest?")) return;
+    try {
+      const data = await startContest(contestId);
+      setContest(data.contest);
+      alert("Contest started!");
+    } catch {
+      alert("Failed to start contest.");
+    }
+  };
+
+  const handleEndContest = async () => {
+    if (!window.confirm("End the contest?")) return;
+    try {
+      const data = await endContest(contestId);
+      setContest(data.contest);
+      alert("Contest ended!");
+    } catch {
+      alert("Failed to end contest.");
     }
   };
 
@@ -191,8 +268,8 @@ function ContestRoomPage() {
     <section className="contest-workspace-root">
       <header className="workspace-header">
         <div className="header-left">
-          <button className="icon-btn" onClick={() => navigate("/contests")} title="Exit Workspace">
-            <Layout size={18} />
+          <button className="back-to-contests" onClick={() => navigate("/contests")}>
+            <ArrowLeft size={16} /> Back
           </button>
           <div className="problem-nav">
             <button 
@@ -226,6 +303,20 @@ function ContestRoomPage() {
 
         <div className="header-right">
           <div className="workspace-actions">
+            {contest?.createdBy?._id === user?.id && (
+              <>
+                {contest.status === "ready" && (
+                  <button className="btn-start" onClick={handleStartContest}>
+                    Start Contest
+                  </button>
+                )}
+                {contest.status === "live" && (
+                  <button className="btn-end" onClick={handleEndContest}>
+                    End Contest
+                  </button>
+                )}
+              </>
+            )}
             <button className="btn-run" onClick={handleRunTestCases} disabled={isRunning}>
               <Play size={14} /> Run
             </button>
@@ -240,14 +331,17 @@ function ContestRoomPage() {
       </header>
 
       <main className="workspace-main">
-        <div className="leetcode-layout">
+        <div className="leetcode-layout" style={{ gridTemplateColumns: `${leftWidth}% 6px 1fr` }}>
           <div className="leetcode-left-panel">
             <div className="panel-tabs">
+              <button className={`panel-tab ${leftTab === 'questions' ? 'active' : ''}`} onClick={() => setLeftTab('questions')}>
+                <Trophy size={16} /> Problems
+              </button>
               <button className={`panel-tab ${leftTab === 'description' ? 'active' : ''}`} onClick={() => setLeftTab('description')}>
                 <FileText size={16} /> Description
               </button>
-              <button className={`panel-tab ${leftTab === 'questions' ? 'active' : ''}`} onClick={() => setLeftTab('questions')}>
-                <Trophy size={16} /> Problems
+              <button className={`panel-tab ${leftTab === 'submissions' ? 'active' : ''}`} onClick={() => setLeftTab('submissions')}>
+                <History size={16} /> Submissions
               </button>
             </div>
 
@@ -274,13 +368,16 @@ function ContestRoomPage() {
                     </div>
                   </div>
                 </div>
-              ) : (
+              ) : leftTab === 'questions' ? (
                 <div className="questions-view">
                   {contest.questions.map((q, idx) => (
                     <button 
                       key={idx} 
                       className={`q-item ${selectedQuestionIndex === idx ? 'active' : ''}`}
-                      onClick={() => setSelectedQuestionIndex(idx)}
+                      onClick={() => {
+                        setSelectedQuestionIndex(idx);
+                        setLeftTab('description');
+                      }}
                     >
                       <span className="q-idx">{idx + 1}</span>
                       <span className="q-name">{q.title}</span>
@@ -288,9 +385,39 @@ function ContestRoomPage() {
                     </button>
                   ))}
                 </div>
+              ) : (
+                <div className="submissions-view">
+                  <h3 className="section-title">My Submissions</h3>
+                  {isSubmissionsLoading ? (
+                    <div className="loading-sub">Loading...</div>
+                  ) : submissions.filter(s => s.questionIndex === selectedQuestionIndex).length === 0 ? (
+                    <div className="empty-sub">No submissions found for this question.</div>
+                  ) : (
+                    <div className="sub-list">
+                      {submissions
+                        .filter(s => s.questionIndex === selectedQuestionIndex)
+                        .map((sub, idx) => (
+                        <div key={sub._id || idx} className="sub-card">
+                          <div className="sub-row">
+                            <span className={`verdict-tag ${sub.verdict === 'Accepted' ? 'pass' : 'fail'}`}>
+                              {sub.verdict}
+                            </span>
+                            <span className="sub-date">{new Date(sub.submittedAt).toLocaleString()}</span>
+                          </div>
+                          <div className="sub-row">
+                            <span className="sub-lang">{sub.language}</span>
+                            <button className="view-code-link" onClick={() => setCode(sub.code)}>Load Code</button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </div>
+
+          <div className="resizer-v" onMouseDown={startResizing}></div>
 
           <div className="leetcode-right-panel">
             <div className="editor-container">
@@ -348,7 +475,13 @@ function ContestRoomPage() {
                         </div>
                         <div className="io-box">
                           <label>Output</label>
-                          <pre>{runResults[selectedTestCase].stdout}</pre>
+                          <pre className={runResults[selectedTestCase].verdict === 'Accepted' ? 'stdout-pass' : 'stdout-fail'}>
+                            {runResults[selectedTestCase].stdout}
+                          </pre>
+                        </div>
+                        <div className="io-box">
+                          <label>Expected</label>
+                          <pre>{currentQuestion.testCases[selectedTestCase].expectedOutput}</pre>
                         </div>
                       </div>
                     ) : (

@@ -2,6 +2,7 @@ const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const Contest = require("../models/Contest");
 const User = require("../models/User");
+const Submission = require("../models/Submission");
 const { accessTokenSecret, refreshTokenSecret } = require("../services/authSession");
 const { SUPPORTED_LANGUAGES, runCodeAgainstTestCases } = require("../services/codeRunner");
 
@@ -175,6 +176,12 @@ const joinContest = async (req, res) => {
     const participantExists = contest.participants.some((participant) => participant.user?._id?.toString() === user._id.toString());
 
     if (!participantExists) {
+      if (contest.status === "live" && !isOrganizer) {
+        return res.status(403).json({ message: "The contest has already started. New participants cannot join." });
+      }
+      if (contest.status === "ended") {
+        return res.status(403).json({ message: "The contest has already ended." });
+      }
       contest.participants.push({ user: user._id });
       await contest.save();
     }
@@ -290,7 +297,7 @@ const runContestCode = async (req, res) => {
       return res.status(403).json({ message: "The contest has ended. Code execution is disabled." });
     }
 
-    const { code, language = "cpp", questionIndex = 0 } = req.body;
+    const { code, language = "cpp", questionIndex = 0, isSubmit = false } = req.body;
 
     if (!SUPPORTED_LANGUAGES.includes(language)) {
       return res.status(400).json({
@@ -311,6 +318,22 @@ const runContestCode = async (req, res) => {
       timeLimitMs: question.timeLimitMs || 2000,
     });
 
+    if (isSubmit) {
+      const overallVerdict = execution.results.every((r) => r.verdict === "Accepted")
+        ? "Accepted"
+        : execution.results.find((r) => r.verdict !== "Accepted")?.verdict || "Wrong Answer";
+
+      await Submission.create({
+        contest: contest._id,
+        user: user._id,
+        questionIndex: Number(questionIndex),
+        code,
+        language,
+        verdict: overallVerdict,
+        results: execution.results,
+      });
+    }
+
     return res.json({
       message: "Code executed successfully.",
       language,
@@ -323,11 +346,36 @@ const runContestCode = async (req, res) => {
   }
 };
 
+const getSubmissions = async (req, res) => {
+  try {
+    const user = await resolveContestUser(req);
+    const contest = await getContestOr404(req.params.contestId, res);
+
+    if (!contest) {
+      return null;
+    }
+
+    if (!user) {
+      return res.status(401).json({ message: "Please sign in to view submissions." });
+    }
+
+    const submissions = await Submission.find({
+      contest: contest._id,
+      user: user._id,
+    }).sort({ createdAt: -1 });
+
+    return res.json({ submissions });
+  } catch (error) {
+    return res.status(500).json({ message: "Unable to load submissions.", error: error.message });
+  }
+};
+
 module.exports = {
   createContest,
   endContest,
   enterContest,
   getContest,
+  getSubmissions,
   joinContest,
   listContests,
   runContestCode,

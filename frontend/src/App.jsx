@@ -14,6 +14,7 @@ import CreateContestPage from "./pages/CreateContestPage";
 import ContestsPage from "./pages/ContestsPage";
 import ContestRoomPage from "./pages/ContestRoomPage";
 import HomePage from "./pages/HomePage";
+import SubmissionsPage from "./pages/SubmissionsPage";
 import { loadSession, signOut } from "./services/authService";
 
 function AppShell({ user, onSignOut }) {
@@ -104,6 +105,7 @@ function AppRoutes() {
         <Route index element={<Navigate to="/home" replace />} />
         <Route path="/home" element={<HomePage />} />
         <Route path="/contests" element={<ContestsPage />} />
+        <Route path="/submissions" element={<SubmissionsPage />} />
         <Route path="/contests/create" element={<CreateContestPage />} />
         <Route path="/contests/:contestId" element={<ContestRoomPage />} />
       </Route>

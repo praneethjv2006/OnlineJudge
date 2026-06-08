@@ -29,7 +29,6 @@ function ContestsPage() {
   const [contests, setContests] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [error, setError] = useState("");
   const [showJoiner, setShowJoiner] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
   const [joinedContest, setJoinedContest] = useState(null);
@@ -58,18 +57,14 @@ function ContestsPage() {
         setIsRefreshing(true);
       }
 
-      setError("");
-
       try {
         const data = await loadContests(visibility);
 
         if (isMounted) {
           setContests(data.contests || []);
         }
-      } catch (requestError) {
-        if (isMounted) {
-          setError(requestError.response?.data?.message || "Unable to load contests.");
-        }
+      } catch {
+        // Silently handle load errors for now or use another notification method
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -85,11 +80,6 @@ function ContestsPage() {
       isMounted = false;
     };
   }, [visibility]);
-
-  const refreshContests = async () => {
-    const data = await loadContests(visibility);
-    setContests(data.contests || []);
-  };
 
   const openJoinPanel = () => {
     setShowJoiner((current) => {
@@ -110,7 +100,6 @@ function ContestsPage() {
     setIsJoining(true);
     setJoinError("");
     setJoinMessage("");
-    setError("");
 
     try {
       const data = await joinContest({ code: joinCode });
@@ -122,8 +111,8 @@ function ContestsPage() {
       if (data.contest?._id) {
         navigate(`/contests/${data.contest._id}`);
       }
-    } catch (requestError) {
-      setJoinError(requestError.response?.data?.message || "Unable to join the contest room.");
+    } catch {
+      setJoinError("Unable to join the contest room.");
     } finally {
       setIsJoining(false);
     }
@@ -133,7 +122,6 @@ function ContestsPage() {
     setIsJoining(true);
     setJoinError("");
     setJoinMessage("");
-    setError("");
 
     try {
       const data = await joinContest({ contestId });
@@ -141,8 +129,8 @@ function ContestsPage() {
       setJoinMessage(data.message || "Joined contest successfully.");
       setShowJoiner(false);
       navigate(`/contests/${contestId}`);
-    } catch (requestError) {
-      setJoinError(requestError.response?.data?.message || "Unable to join the contest room.");
+    } catch {
+      setJoinError("Unable to join the contest room.");
       setShowJoiner(true);
     } finally {
       setIsJoining(false);
@@ -151,51 +139,44 @@ function ContestsPage() {
 
   return (
     <section className="page-stack contests-page">
-      <section className="panel contests-header">
-        <div className="contests-heading">
-          <span className="eyebrow">Contests</span>
-          <h1>Contest rooms</h1>
+      <section className="panel contests-header-single">
+        <div className="header-left">
+          <div className="contests-heading">
+            <h1>Contests</h1>
+          </div>
+
+          <div className="segmented-control compact-toggle">
+            <button
+              type="button"
+              className={visibility === "public" ? "segment active" : "segment"}
+              onClick={() => setVisibility("public")}
+            >
+              Public
+            </button>
+            <button
+              type="button"
+              className={visibility === "private" ? "segment active" : "segment"}
+              onClick={() => setVisibility("private")}
+            >
+              Private
+            </button>
+          </div>
         </div>
 
-        <div className="contest-actions-row">
-          <button
-            type="button"
-            className={showJoiner ? "secondary-action active" : "secondary-action"}
-            onClick={openJoinPanel}
-          >
-            {showJoiner ? "Hide join" : "Join contest"}
-          </button>
-          <Link to="/contests/create" className="primary-action">
-            Create contest
-          </Link>
+        <div className="header-right">
+          <div className="contest-actions-row">
+            <button
+              type="button"
+              className={showJoiner ? "secondary-action active" : "secondary-action"}
+              onClick={openJoinPanel}
+            >
+              {showJoiner ? "Hide join" : "Join contest"}
+            </button>
+            <Link to="/contests/create" className="primary-action">
+              Create contest
+            </Link>
+          </div>
         </div>
-      </section>
-
-      <section className="panel contests-toolbar">
-        <div className="segmented-control contest-toggle">
-          <button
-            type="button"
-            aria-pressed={visibility === "public"}
-            className={visibility === "public" ? "segment active" : "segment"}
-            onClick={() => setVisibility("public")}
-          >
-            Public rooms
-          </button>
-          <button
-            type="button"
-            aria-pressed={visibility === "private"}
-            className={visibility === "private" ? "segment active" : "segment"}
-            onClick={() => setVisibility("private")}
-          >
-            Private rooms
-          </button>
-        </div>
-
-        <span className="muted-copy">
-          {visibility === "public"
-            ? "Browse open rooms and join them directly."
-            : "Review locked rooms and join them with a code."}
-        </span>
       </section>
 
       {joinedContest && (

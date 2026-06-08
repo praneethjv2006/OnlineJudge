@@ -1,22 +1,14 @@
 import { useEffect, useRef, useState } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, Link } from "react-router-dom";
 import PropTypes from "prop-types";
-
-function ProfileIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="M12 12.75a4.25 4.25 0 1 0 0-8.5 4.25 4.25 0 0 0 0 8.5Zm0 2.25c-4.42 0-8 2.49-8 5.56V22h16v-1.44c0-3.07-3.58-5.56-8-5.56Z" />
-    </svg>
-  );
-}
-
-function SignOutIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-      <path d="M10 4.5A1.5 1.5 0 0 0 8.5 3h-4A1.5 1.5 0 0 0 3 4.5v15A1.5 1.5 0 0 0 4.5 21h4A1.5 1.5 0 0 0 10 19.5v-2H8v2h-4v-15h4v2h2v-2Zm8.44 6.5-2.72-2.72 1.42-1.42L22 12l-4.86 4.86-1.42-1.42 2.72-2.72H9v-2h9.44Z" />
-    </svg>
-  );
-}
+import { 
+  Home, 
+  Trophy, 
+  Activity, 
+  LogOut, 
+  ChevronDown,
+  Terminal
+} from "lucide-react";
 
 function NavBar({ user, onSignOut }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -50,50 +42,68 @@ function NavBar({ user, onSignOut }) {
   };
 
   return (
-    <header className="topbar">
-      <div className="brand-mark">
-        <span className="brand-badge">AJ</span>
-        <div>
-          <strong>Apex Judge</strong>
-          <span>Online contest workspace</span>
-        </div>
-      </div>
-
-      <nav className="topnav">
-        <NavLink to="/home" className={({ isActive }) => (isActive ? "nav-link active" : "nav-link") }>
-          Home
-        </NavLink>
-        <NavLink to="/contests" className={({ isActive }) => (isActive ? "nav-link active" : "nav-link") }>
-          Contests
-        </NavLink>
-      </nav>
-
-      <div className="topbar-meta profile-shell" ref={menuRef}>
-        <button
-          type="button"
-          className="profile-button"
-          aria-label="Open account menu"
-          aria-expanded={isMenuOpen}
-          onClick={() => setIsMenuOpen((current) => !current)}
-        >
-          <span className="profile-avatar">{user?.name?.[0]?.toUpperCase() || "U"}</span>
-          <ProfileIcon />
-        </button>
-
-        {isMenuOpen && (
-          <div className="profile-menu panel">
-            <div className="profile-menu-head">
-              <span className="profile-menu-title">Signed in as</span>
-              <strong>{user?.name || "User"}</strong>
-              <span className="profile-menu-email">{user?.email || "Active session"}</span>
-            </div>
-
-            <button type="button" className="profile-menu-action" onClick={handleSignOut}>
-              <SignOutIcon />
-              <span>Sign out</span>
-            </button>
+    <header className="main-nav-wrapper">
+      <div className="main-nav-container">
+        <Link to="/home" className="nav-brand">
+          <div className="brand-icon">
+            <Terminal size={20} strokeWidth={2.5} />
           </div>
-        )}
+          <div className="brand-text">
+            <strong>Apex<span>Judge</span></strong>
+          </div>
+        </Link>
+
+        <nav className="nav-links">
+          <NavLink to="/home" className={({ isActive }) => (isActive ? "nav-item active" : "nav-item") }>
+            <Home size={18} />
+            <span>Home</span>
+          </NavLink>
+          <NavLink to="/contests" className={({ isActive }) => (isActive ? "nav-item active" : "nav-item") }>
+            <Trophy size={18} />
+            <span>Contests</span>
+          </NavLink>
+          <NavLink to="/submissions" className={({ isActive }) => (isActive ? "nav-item active" : "nav-item") }>
+            <Activity size={18} />
+            <span>Submissions</span>
+          </NavLink>
+        </nav>
+
+        <div className="nav-profile-section" ref={menuRef}>
+          <button
+            type="button"
+            className={`profile-trigger ${isMenuOpen ? 'active' : ''}`}
+            onClick={() => setIsMenuOpen((current) => !current)}
+          >
+            <div className="user-avatar">
+              {user?.name?.[0]?.toUpperCase() || "U"}
+            </div>
+            <div className="user-info-mini">
+              <span className="user-name-short">{user?.name?.split(' ')[0] || "User"}</span>
+              <ChevronDown size={14} className={`chevron ${isMenuOpen ? 'rotated' : ''}`} />
+            </div>
+          </button>
+
+          {isMenuOpen && (
+            <div className="profile-dropdown-menu">
+              <div className="dropdown-header">
+                <div className="header-avatar">
+                   {user?.name?.[0]?.toUpperCase() || "U"}
+                </div>
+                <div className="header-meta">
+                  <span className="full-name">{user?.name || "User"}</span>
+                  <span className="user-email">{user?.email || "active session"}</span>
+                </div>
+              </div>
+              
+              <div className="dropdown-divider"></div>
+              
+              <button type="button" className="dropdown-item danger" onClick={handleSignOut}>
+                <LogOut size={16} />
+                <span>Sign Out</span>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );

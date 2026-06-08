@@ -4,6 +4,7 @@ const {
 	endContest,
 	enterContest,
 	getContest,
+	getSubmissions,
 	joinContest,
 	listContests,
 	runContestCode,
@@ -14,6 +15,7 @@ const router = express.Router();
 
 router.get("/", listContests);
 router.get("/:contestId", getContest);
+router.get("/:contestId/submissions", getSubmissions);
 router.post("/:contestId/enter", enterContest);
 router.post("/:contestId/run", runContestCode);
 router.post("/:contestId/start", startContest);

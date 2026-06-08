@@ -39,3 +39,8 @@ export const runContestCode = async (contestId, payload) => {
   const response = await api.post(`/contests/${contestId}/run`, payload);
   return response.data;
 };
+
+export const getContestSubmissions = async (contestId) => {
+  const response = await api.get(`/contests/${contestId}/submissions`);
+  return response.data;
+};

@@ -1,5 +1,7 @@
 import { useState } from "react";
 import PropTypes from "prop-types";
+import Lottie from "lottie-react";
+import animationData from "../../assets/animations/gif1.json";
 import { signIn, signUp } from "../../services/authService";
 
 const initialForm = {
@@ -77,28 +79,23 @@ function AuthPage({ onAuthenticated }) {
   return (
     <main className="auth-page">
       <section className="auth-grid">
-        <div className="auth-copy panel panel-accent">
-          <span className="eyebrow">Apex Judge</span>
-          <h1>Precision tools for serious coding contests.</h1>
-          <p>
-            A streamlined online judge with a professional interface, contest orchestration, and a secure
-            authentication flow built for focused problem solving.
-          </p>
-
-          <div className="feature-list">
-            <article>
-              <strong>Secure sign in</strong>
-              <span>Session-based authentication with cookie-backed persistence.</span>
-            </article>
-            <article>
-              <strong>Contest control</strong>
-              <span>Create public and private contests with structured questions.</span>
-            </article>
-            <article>
-              <strong>Polished workflow</strong>
-              <span>Move directly from login to a curated home dashboard.</span>
-            </article>
-          </div>
+        <div 
+          className="auth-copy panel panel-accent" 
+          style={{ 
+            display: "flex", 
+            alignItems: "center", 
+            justifyContent: "center", 
+            padding: 0, 
+            overflow: "hidden",
+            background: "transparent",
+            border: "none"
+          }}
+        >
+          <Lottie 
+            animationData={animationData} 
+            loop={true} 
+            style={{ width: "100%", height: "100%" }} 
+          />
         </div>
 
         <section className="panel auth-panel">

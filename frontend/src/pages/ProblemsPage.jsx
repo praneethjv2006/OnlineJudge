@@ -245,8 +245,8 @@ const ProblemsPage = () => {
                     <Info size={16} />
                     <span style={{ fontSize: "0.8rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "1px" }}>Basic Information</span>
                   </div>
-                  <div className="form-grid two-up">
-                    <label>
+                  <div className="form-grid two-up" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))" }}>
+                    <label style={{ minWidth: 0 }}>
                       <span style={{ fontSize: "0.85rem", color: "#999", marginBottom: "8px", display: "block" }}>Problem Title</span>
                       <input
                         type="text"
@@ -255,17 +255,17 @@ const ProblemsPage = () => {
                         onChange={handleInputChange}
                         required
                         placeholder="e.g. Longest Palindromic Substring"
-                        style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)" }}
+                        style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)", width: "100%" }}
                       />
                     </label>
 
-                    <label>
+                    <label style={{ minWidth: 0 }}>
                       <span style={{ fontSize: "0.85rem", color: "#999", marginBottom: "8px", display: "block" }}>Difficulty</span>
                       <select
                         name="difficulty"
                         value={formData.difficulty}
                         onChange={handleInputChange}
-                        style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)" }}
+                        style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)", width: "100%" }}
                       >
                         <option value="easy">Easy</option>
                         <option value="medium">Medium</option>
@@ -293,8 +293,8 @@ const ProblemsPage = () => {
                     <Activity size={16} />
                     <span style={{ fontSize: "0.8rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "1px" }}>Complexity Targets</span>
                   </div>
-                  <div className="form-grid two-up">
-                    <label>
+                  <div className="form-grid two-up" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))" }}>
+                    <label style={{ minWidth: 0 }}>
                       <span style={{ fontSize: "0.85rem", color: "#999", marginBottom: "8px", display: "block" }}>Time Complexity</span>
                       <input
                         type="text"
@@ -302,10 +302,10 @@ const ProblemsPage = () => {
                         value={formData.timeComplexity}
                         onChange={handleInputChange}
                         placeholder="e.g. O(N log N)"
-                        style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)" }}
+                        style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)", width: "100%" }}
                       />
                     </label>
-                    <label>
+                    <label style={{ minWidth: 0 }}>
                       <span style={{ fontSize: "0.85rem", color: "#999", marginBottom: "8px", display: "block" }}>Space Complexity</span>
                       <input
                         type="text"
@@ -313,7 +313,7 @@ const ProblemsPage = () => {
                         value={formData.spaceComplexity}
                         onChange={handleInputChange}
                         placeholder="e.g. O(1)"
-                        style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)" }}
+                        style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)", width: "100%" }}
                       />
                     </label>
                   </div>
@@ -362,25 +362,25 @@ const ProblemsPage = () => {
                             </button>
                           )}
                         </div>
-                        <div className="form-grid two-up">
-                          <label>
+                        <div className="form-grid two-up" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
+                          <label style={{ minWidth: 0 }}>
                             <span style={{ fontSize: "0.75rem", color: "#666", marginBottom: "6px", display: "block" }}>Input Data</span>
                             <textarea
                               value={tc.input}
                               onChange={(e) => handleTestCaseChange(index, "input", e.target.value)}
                               required
                               placeholder="Standard input..."
-                              style={{ minHeight: "80px", fontSize: "0.85rem", fontFamily: "monospace", background: "rgba(0,0,0,0.2)" }}
+                              style={{ minHeight: "80px", fontSize: "0.85rem", fontFamily: "monospace", background: "rgba(0,0,0,0.2)", width: "100%" }}
                             />
                           </label>
-                          <label>
+                          <label style={{ minWidth: 0 }}>
                             <span style={{ fontSize: "0.75rem", color: "#666", marginBottom: "6px", display: "block" }}>Expected Output</span>
                             <textarea
                               value={tc.expectedOutput}
                               onChange={(e) => handleTestCaseChange(index, "expectedOutput", e.target.value)}
                               required
                               placeholder="Standard output..."
-                              style={{ minHeight: "80px", fontSize: "0.85rem", fontFamily: "monospace", background: "rgba(0,0,0,0.2)" }}
+                              style={{ minHeight: "80px", fontSize: "0.85rem", fontFamily: "monospace", background: "rgba(0,0,0,0.2)", width: "100%" }}
                             />
                           </label>
                         </div>

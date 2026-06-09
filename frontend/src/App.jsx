@@ -12,9 +12,10 @@ import AuthPage from "./components/auth/AuthPage";
 import NavBar from "./components/layout/NavBar";
 import CreateContestPage from "./pages/CreateContestPage";
 import ContestsPage from "./pages/ContestsPage";
+import ProblemsPage from "./pages/ProblemsPage";
 import ContestRoomPage from "./pages/ContestRoomPage";
 import HomePage from "./pages/HomePage";
-import SubmissionsPage from "./pages/SubmissionsPage";
+import DashboardPage from "./pages/DashboardPage";
 import { loadSession, signOut } from "./services/authService";
 
 function AppShell({ user, onSignOut }) {
@@ -104,8 +105,9 @@ function AppRoutes() {
       <Route element={user ? <AppShell user={user} onSignOut={handleSignOut} /> : <Navigate to="/auth" replace />}>
         <Route index element={<Navigate to="/home" replace />} />
         <Route path="/home" element={<HomePage />} />
+        <Route path="/problems" element={<ProblemsPage />} />
         <Route path="/contests" element={<ContestsPage />} />
-        <Route path="/submissions" element={<SubmissionsPage />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/contests/create" element={<CreateContestPage />} />
         <Route path="/contests/:contestId" element={<ContestRoomPage />} />
       </Route>

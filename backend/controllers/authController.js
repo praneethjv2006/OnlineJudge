@@ -1,6 +1,7 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const Submission = require("../models/Submission");
 const {
   buildTokens,
   clearRefreshCookie,
@@ -20,24 +21,32 @@ const resolveSessionUser = async (req) => {
   }
 
   if (bearerToken) {
-    const payload = jwt.verify(bearerToken, accessTokenSecret);
-    const user = await User.findById(payload.id);
+    try {
+      const payload = jwt.verify(bearerToken, accessTokenSecret);
+      const user = await User.findById(payload.id);
 
-    if (!user) {
-      return null;
+      if (user) {
+        return { token: bearerToken, user };
+      }
+    } catch (err) {
+      // Access token verification failed (e.g. expired). Fallback to refresh token if available.
     }
-
-    return { token: bearerToken, user };
   }
 
-  const payload = jwt.verify(refreshToken, refreshTokenSecret);
-  const user = await User.findById(payload.id);
+  if (refreshToken) {
+    try {
+      const payload = jwt.verify(refreshToken, refreshTokenSecret);
+      const user = await User.findById(payload.id);
 
-  if (!user || user.refreshToken !== refreshToken) {
-    return null;
+      if (user && user.refreshToken === refreshToken) {
+        return { token: refreshToken, user };
+      }
+    } catch (err) {
+      // Refresh token verification failed
+    }
   }
 
-  return { token: refreshToken, user };
+  return null;
 };
 
 const signIn = async (req, res) => {
@@ -166,10 +175,65 @@ const signOut = async (req, res) => {
   return res.json({ message: "Logged out." });
 };
 
+const getMyStats = async (req, res) => {
+  try {
+    const session = await resolveSessionUser(req);
+
+    if (!session) {
+      return res.status(401).json({ message: "Session expired. Please sign in again." });
+    }
+
+    const userId = session.user._id;
+
+    // Fetch all submissions for this user, populating the contest questions
+    const submissions = await Submission.find({ user: userId })
+      .populate("contest", "title questions")
+      .sort({ createdAt: -1 });
+
+    const solvedSet = new Set();
+    submissions.forEach((sub) => {
+      if (sub.verdict === "Accepted" && sub.contest) {
+        solvedSet.add(`${sub.contest._id || sub.contest}-${sub.questionIndex}`);
+      }
+    });
+
+    const totalSolved = solvedSet.size;
+
+    return res.json({
+      user: safeUser(session.user),
+      totalSolved,
+      submissions: submissions.map((sub) => {
+        let questionTitle = `Question #${sub.questionIndex + 1}`;
+        if (sub.contest && Array.isArray(sub.contest.questions)) {
+          const q = sub.contest.questions[sub.questionIndex];
+          if (q && q.title) {
+            questionTitle = q.title;
+          }
+        }
+        return {
+          _id: sub._id,
+          contestId: sub.contest?._id,
+          contestTitle: sub.contest?.title || "Unknown Contest",
+          questionIndex: sub.questionIndex,
+          questionTitle,
+          language: sub.language,
+          verdict: sub.verdict,
+          code: sub.code,
+          submittedAt: sub.submittedAt || sub.createdAt,
+        };
+      }),
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "Unable to load user dashboard stats.", error: error.message });
+  }
+};
+
 module.exports = {
   me,
   refreshSession,
   signIn,
   signOut,
   signUp,
+  getMyStats,
+  resolveSessionUser,
 };

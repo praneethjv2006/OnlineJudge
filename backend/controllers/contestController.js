@@ -16,18 +16,29 @@ const resolveContestUser = async (req) => {
   }
 
   if (bearerToken) {
-    const payload = jwt.verify(bearerToken, accessTokenSecret);
-    return User.findById(payload.id);
+    try {
+      const payload = jwt.verify(bearerToken, accessTokenSecret);
+      const user = await User.findById(payload.id);
+      if (user) return user;
+    } catch (err) {
+      // Access token verification failed. Fallback to refresh token if available.
+    }
   }
 
-  const payload = jwt.verify(refreshToken, refreshTokenSecret);
-  const user = await User.findById(payload.id);
+  if (refreshToken) {
+    try {
+      const payload = jwt.verify(refreshToken, refreshTokenSecret);
+      const user = await User.findById(payload.id);
 
-  if (!user || user.refreshToken !== refreshToken) {
-    return null;
+      if (user && user.refreshToken === refreshToken) {
+        return user;
+      }
+    } catch (err) {
+      // Refresh token verification failed
+    }
   }
 
-  return user;
+  return null;
 };
 
 const resolveContestCreator = resolveContestUser;

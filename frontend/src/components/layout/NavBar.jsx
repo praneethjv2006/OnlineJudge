@@ -7,7 +7,8 @@ import {
   Activity, 
   LogOut, 
   ChevronDown,
-  Terminal
+  Terminal,
+  Code
 } from "lucide-react";
 
 function NavBar({ user, onSignOut }) {
@@ -58,13 +59,17 @@ function NavBar({ user, onSignOut }) {
             <Home size={18} />
             <span>Home</span>
           </NavLink>
+          <NavLink to="/problems" className={({ isActive }) => (isActive ? "nav-item active" : "nav-item") }>
+            <Code size={18} />
+            <span>Problems</span>
+          </NavLink>
           <NavLink to="/contests" className={({ isActive }) => (isActive ? "nav-item active" : "nav-item") }>
             <Trophy size={18} />
             <span>Contests</span>
           </NavLink>
-          <NavLink to="/submissions" className={({ isActive }) => (isActive ? "nav-item active" : "nav-item") }>
+          <NavLink to="/dashboard" className={({ isActive }) => (isActive ? "nav-item active" : "nav-item") }>
             <Activity size={18} />
-            <span>Submissions</span>
+            <span>Dashboard</span>
           </NavLink>
         </nav>
 

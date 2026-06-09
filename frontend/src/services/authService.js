@@ -27,6 +27,11 @@ export const loadSession = async () => {
   return response.data;
 };
 
+export const loadDashboardStats = async () => {
+  const response = await api.get("/auth/dashboard-stats");
+  return response.data;
+};
+
 export const signOut = async () => {
   const response = await api.post("/auth/logout");
   clearAccessToken();

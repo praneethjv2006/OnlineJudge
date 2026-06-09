@@ -6,6 +6,7 @@ const cookieParser = require("cookie-parser");
 const connectDB = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
 const contestRoutes = require("./routes/contestRoutes");
+const problemRoutes = require("./routes/problemRoutes");
 
 dotenv.config();
 
@@ -34,6 +35,7 @@ app.get("/api/health", (req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/contests", contestRoutes);
+app.use("/api/problems", problemRoutes);
 
 const PORT = process.env.PORT || 5000;
 

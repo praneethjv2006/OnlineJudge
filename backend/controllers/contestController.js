@@ -1,47 +1,11 @@
-const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const Contest = require("../models/Contest");
-const User = require("../models/User");
 const Submission = require("../models/Submission");
-const { accessTokenSecret, refreshTokenSecret } = require("../services/authSession");
+const { resolveUserFromAccessToken } = require("../services/authSession");
 const { SUPPORTED_LANGUAGES, runCodeAgainstTestCases } = require("../services/codeRunner");
 
-const resolveContestUser = async (req) => {
-  const authHeader = req.headers.authorization || "";
-  const bearerToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
-  const refreshToken = req.cookies?.refreshToken;
-
-  if (!bearerToken && !refreshToken) {
-    return null;
-  }
-
-  if (bearerToken) {
-    try {
-      const payload = jwt.verify(bearerToken, accessTokenSecret);
-      const user = await User.findById(payload.id);
-      if (user) return user;
-    } catch (err) {
-      // Access token verification failed. Fallback to refresh token if available.
-    }
-  }
-
-  if (refreshToken) {
-    try {
-      const payload = jwt.verify(refreshToken, refreshTokenSecret);
-      const user = await User.findById(payload.id);
-
-      if (user && user.refreshToken === refreshToken) {
-        return user;
-      }
-    } catch (err) {
-      // Refresh token verification failed
-    }
-  }
-
-  return null;
-};
-
-const resolveContestCreator = resolveContestUser;
+const resolveContestUser = resolveUserFromAccessToken;
+const resolveContestCreator = resolveUserFromAccessToken;
 
 const populateContest = (query) => query.populate("createdBy", "name email").populate("participants.user", "name email");
 

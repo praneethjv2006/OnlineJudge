@@ -14,3 +14,13 @@ export const createProblem = async (problemData) => {
   const response = await api.post("/problems", problemData);
   return response.data.problem;
 };
+
+export const runProblemCode = async (id, payload) => {
+  const response = await api.post(`/problems/${id}/run`, payload);
+  return response.data;
+};
+
+export const getProblemSubmissions = async (id) => {
+  const response = await api.get(`/problems/${id}/submissions`);
+  return response.data;
+};

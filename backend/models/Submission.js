@@ -5,7 +5,12 @@ const submissionSchema = new mongoose.Schema(
     contest: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Contest",
-      required: true,
+      required: false,
+    },
+    problem: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Problem",
+      required: false,
     },
     user: {
       type: mongoose.Schema.Types.ObjectId,
@@ -14,7 +19,7 @@ const submissionSchema = new mongoose.Schema(
     },
     questionIndex: {
       type: Number,
-      required: true,
+      required: false,
     },
     code: {
       type: String,

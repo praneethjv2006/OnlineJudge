@@ -1,5 +1,7 @@
 const Problem = require("../models/Problem");
-const { resolveSessionUser } = require("./authController");
+const Submission = require("../models/Submission");
+const { resolveUserFromAccessToken } = require("../services/authSession");
+const { SUPPORTED_LANGUAGES, runCodeAgainstTestCases } = require("../services/codeRunner");
 
 const listProblems = async (req, res) => {
   try {
@@ -14,8 +16,8 @@ const listProblems = async (req, res) => {
 
 const createProblem = async (req, res) => {
   try {
-    const session = await resolveSessionUser(req);
-    if (!session) {
+    const user = await resolveUserFromAccessToken(req);
+    if (!user) {
       return res.status(401).json({ message: "Please sign in to create a problem." });
     }
 
@@ -37,7 +39,7 @@ const createProblem = async (req, res) => {
         input: tc.input?.trim(),
         expectedOutput: tc.expectedOutput?.trim(),
       })),
-      createdBy: session.user._id,
+      createdBy: user._id,
     });
 
     return res.status(201).json({
@@ -61,8 +63,88 @@ const getProblem = async (req, res) => {
   }
 };
 
+const runProblemCode = async (req, res) => {
+  try {
+    const user = await resolveUserFromAccessToken(req);
+    if (!user) {
+      return res.status(401).json({ message: "Please sign in to solve problems." });
+    }
+
+    const problem = await Problem.findById(req.params.id);
+    if (!problem) {
+      return res.status(404).json({ message: "Problem not found." });
+    }
+
+    const { code, language = "cpp", isSubmit = false, customTestCases } = req.body;
+
+    if (!SUPPORTED_LANGUAGES.includes(language)) {
+      return res.status(400).json({
+        message: `Unsupported language. Choose one of: ${SUPPORTED_LANGUAGES.join(", ")}.`,
+      });
+    }
+
+    let casesToRun = problem.testCases;
+    if (!isSubmit && Array.isArray(customTestCases) && customTestCases.length > 0) {
+      casesToRun = customTestCases.map((tc) => ({
+        input: tc.input ?? "",
+        expectedOutput: tc.expectedOutput ?? "",
+      }));
+    }
+
+    const execution = await runCodeAgainstTestCases({
+      code,
+      language,
+      testCases: casesToRun,
+      timeLimitMs: 2000,
+    });
+
+    if (isSubmit) {
+      const overallVerdict = execution.results.every((r) => r.verdict === "Accepted")
+        ? "Accepted"
+        : execution.results.find((r) => r.verdict !== "Accepted")?.verdict || "Wrong Answer";
+
+      await Submission.create({
+        problem: problem._id,
+        user: user._id,
+        code,
+        language,
+        verdict: overallVerdict,
+        results: execution.results,
+      });
+    }
+
+    return res.json({
+      message: "Code executed successfully.",
+      results: execution.results,
+      terminalOutput: execution.terminalOutput,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message || "Unable to run code.", error: error.message });
+  }
+};
+
+const getProblemSubmissions = async (req, res) => {
+  try {
+    const user = await resolveUserFromAccessToken(req);
+    if (!user) {
+      return res.status(401).json({ message: "Please sign in to view submissions." });
+    }
+
+    const submissions = await Submission.find({
+      problem: req.params.id,
+      user: user._id,
+    }).sort({ createdAt: -1 });
+
+    return res.json({ submissions });
+  } catch (error) {
+    return res.status(500).json({ message: "Unable to load submissions.", error: error.message });
+  }
+};
+
 module.exports = {
   listProblems,
   createProblem,
   getProblem,
+  runProblemCode,
+  getProblemSubmissions,
 };

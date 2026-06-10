@@ -13,7 +13,10 @@ import {
   Compass,
   CheckCircle2,
   Activity,
-  Server
+  Server,
+  Zap,
+  Clock,
+  Sparkles
 } from "lucide-react";
 
 const platformSpecifications = [
@@ -95,42 +98,64 @@ function HomePage() {
 
   return (
     <section className="page-stack home-page">
-      {/* 1. HERO PANEL */}
+      {/* 1. HERO PANEL (LEETCODE / DEVELOPER GREETING) */}
       <section className="dashboard-hero">
         <div className="hero-main-content">
           <div className="hero-eyebrow">
-            <Server size={14} />
-            <span>ApexJudge Active Session</span>
+            <Sparkles size={14} />
+            <span>Developer Center</span>
           </div>
           <h1 className="hero-title-main">
             Welcome back, <br />
             <span>{user?.name || "operator"}</span>.
           </h1>
           <p className="hero-description">
-            Your centralized room coordinator and code evaluation workspace. Deploy test suites, run competitive coding sprints, and review participant runtimes from a neat dashboard interface.
+            Your secure competitive arena and MERN compilation environment. Coordinate live contest rooms, compile single challenge testbeds, and track participant submission metrics.
           </p>
           <div className="hero-btn-group">
-            <Link to="/contests" className="primary-action active">
-              Open Workspace
-            </Link>
-            <Link to="/contests/create" className="secondary-action">
-              Create Contest
-            </Link>
+            <button onClick={() => navigate("/problems")} className="primary-action active" style={{ display: "inline-flex", gap: "8px" }}>
+              <Compass size={16} /> Explore Problems
+            </button>
+            <button onClick={() => navigate("/contests/create")} className="secondary-action" style={{ display: "inline-flex", gap: "8px" }}>
+              <PlusCircle size={16} /> Create Arena
+            </button>
           </div>
         </div>
 
         {/* Hero Quick Statistics */}
         <div className="hero-stats">
           <article className="panel-accent">
-            <strong>System Node</strong>
-            <span>Secure Cookie Handshake Active</span>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--accent)", marginBottom: "4px" }}>
+              <ShieldCheck size={16} />
+              <strong>Secure Link</strong>
+            </div>
+            <span>Cookie Session Active</span>
           </article>
           <article>
-            <strong>Local Time</strong>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#ccc", marginBottom: "4px" }}>
+              <Clock size={16} />
+              <strong>Local Time</strong>
+            </div>
             <span style={{ fontFamily: "monospace", letterSpacing: "1px", fontSize: "1rem" }}>{currentTime || "--:--:--"}</span>
           </article>
         </div>
       </section>
+
+      {/* FEATURED PRACTICE ARENA BANNER */}
+      <div className="featured-challenge-banner" onClick={() => navigate("/problems")}>
+        <div className="featured-banner-left">
+          <div className="featured-banner-icon">
+            <Zap size={22} />
+          </div>
+          <div className="featured-banner-text">
+            <h3>Apex Practice Challenges</h3>
+            <p>Solve algorithm challenges in C++, Python, Javascript and C. Test your solution limits, examine complexity runtimes, and trace custom compilation testcases.</p>
+          </div>
+        </div>
+        <div className="featured-banner-action">
+          <span>Explore Sandbox <ArrowRight size={16} /></span>
+        </div>
+      </div>
 
       {/* 2. DASHBOARD BODY (2 columns layout) */}
       <div className="dashboard-layout-grid">
@@ -139,11 +164,11 @@ function HomePage() {
           
           {/* Quick Actions Panel */}
           <div>
-            <h3 style={{ margin: "0 0 12px 4px", fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.15em", color: "var(--muted)" }}>Quick Actions</h3>
+            <h3 style={{ margin: "0 0 12px 4px", fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.15em", color: "var(--muted)" }}>Platform Shortcuts</h3>
             <div className="quick-actions-panel">
               <div className="action-card-interactive" onClick={() => navigate("/contests")}>
                 <div className="action-card-icon">
-                  <Compass size={22} />
+                  <Trophy size={22} />
                 </div>
                 <h3>Explore Rooms</h3>
                 <p>Browse public competitive coding contests and join active rooms.</p>
@@ -179,7 +204,7 @@ function HomePage() {
           {/* Quick Contests Feed */}
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "0 4px 12px" }}>
-              <h3 style={{ margin: 0, fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.15em", color: "var(--muted)" }}>Active Public Contests</h3>
+              <h3 style={{ margin: 0, fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.15em", color: "var(--muted)" }}>Active Contests Feed</h3>
               <Link to="/contests" style={{ fontSize: "0.85rem", color: "var(--accent)", fontWeight: "600", display: "flex", alignItems: "center", gap: "4px" }}>
                 All rooms <ArrowRight size={12} />
               </Link>
@@ -219,7 +244,7 @@ function HomePage() {
 
         {/* Right Side: System Status Monitor */}
         <div>
-          <h3 style={{ margin: "0 0 12px 4px", fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.15em", color: "var(--muted)" }}>System Node Monitor</h3>
+          <h3 style={{ margin: "0 0 12px 4px", fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.15em", color: "var(--muted)" }}>Engine Architecture</h3>
           <div className="system-status-container">
             
             <div className="status-indicator-tile">

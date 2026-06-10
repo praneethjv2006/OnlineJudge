@@ -1,11 +1,25 @@
-import React, { useState, useEffect } from "react";
-import { Plus, Trash2, X, Info, Code2, Beaker, ChevronRight, Activity } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { 
+  Plus, 
+  Trash2, 
+  X, 
+  Info, 
+  Code2, 
+  Beaker, 
+  ChevronRight, 
+  Activity,
+  CheckCircle2,
+  Filter,
+  Search
+} from "lucide-react";
 import { getProblems, createProblem } from "../services/problemService";
 
 const ProblemsPage = () => {
   const [problems, setProblems] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
   const [formData, setFormData] = useState({
     title: "",
     difficulty: "easy",
@@ -75,53 +89,99 @@ const ProblemsPage = () => {
     }
   };
 
+  const filteredProblems = problems.filter(p => 
+    p.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <main className="app-main">
       <div className="page-stack">
         <div className="section-heading inline">
           <div>
             <h1 className="brand-mark">
-              <strong>Problems</strong>
+              <strong>Problemset</strong>
             </h1>
-            <p className="muted-copy">Practice your coding skills with community-created problems.</p>
+            <p className="muted-copy">Master your skills with our curated collection of coding challenges.</p>
+          </div>
+
+          <div style={{ display: "flex", gap: "12px" }}>
+             <div style={{ position: "relative" }}>
+                <Search size={18} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "var(--muted)" }} />
+                <input 
+                  type="text" 
+                  placeholder="Search problems..." 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  style={{ 
+                    padding: "10px 12px 10px 40px", 
+                    borderRadius: "10px", 
+                    background: "rgba(255,255,255,0.04)", 
+                    border: "1px solid var(--border)",
+                    color: "#fff",
+                    width: "240px",
+                    fontSize: "0.9rem"
+                  }} 
+                />
+             </div>
+             <button className="ghost-button" style={{ borderRadius: "10px", padding: "0 16px" }}>
+                <Filter size={18} style={{ marginRight: "8px" }} /> Filter
+             </button>
           </div>
         </div>
 
         {loading ? (
           <div className="loading-state">Loading problems...</div>
-        ) : problems.length === 0 ? (
+        ) : filteredProblems.length === 0 ? (
           <div className="empty-state panel">
             <h3>No problems found</h3>
-            <p>Be the first to create a problem!</p>
+            <p>{searchQuery ? "Try a different search term." : "Be the first to create a problem!"}</p>
           </div>
         ) : (
-          <div className="contest-grid">
-            {problems.map((problem) => (
-              <div key={problem._id} className="contest-card panel clickable-card">
-                <div className="contest-card-head">
-                  <h3 style={{ margin: 0 }}>{problem.title}</h3>
-                  <span className={`difficulty-tag ${problem.difficulty}`}>
-                    {problem.difficulty.toUpperCase()}
-                  </span>
-                </div>
-                <p style={{ margin: "12px 0", color: "var(--muted)", fontSize: "0.9rem" }}>
-                  {problem.statement.substring(0, 100)}...
-                </p>
-                <div className="contest-meta">
-                  <div>
-                    <dt>Complexity</dt>
-                    <dd>{problem.timeComplexity || "N/A"}</dd>
-                  </div>
-                  <div>
-                    <dt>Space</dt>
-                    <dd>{problem.spaceComplexity || "N/A"}</dd>
-                  </div>
-                </div>
-                <div className="contest-owner" style={{ marginTop: "auto", paddingTop: "12px" }}>
-                  <span style={{ fontSize: "0.8rem" }}>Created by {problem.createdBy?.name || "Unknown"}</span>
-                </div>
-              </div>
-            ))}
+          <div className="problems-list-container">
+            <table className="problems-list-table">
+              <thead>
+                <tr>
+                  <th className="problem-status-cell">Status</th>
+                  <th>Title</th>
+                  <th>Difficulty</th>
+                  <th>Complexity</th>
+                  <th>Created By</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredProblems.map((problem) => (
+                  <tr key={problem._id}>
+                    <td className="problem-status-cell">
+                      <div className="problem-status-icon">
+                        {/* Placeholder for solved status */}
+                        <CheckCircle2 size={18} style={{ opacity: 0.1 }} />
+                      </div>
+                    </td>
+                    <td>
+                      <Link to={`/problems/${problem._id}`} className="problem-title-link">
+                        {problem.title}
+                      </Link>
+                    </td>
+                    <td>
+                      <span className={`difficulty-tag-v2 ${problem.difficulty}`}>
+                        {problem.difficulty}
+                      </span>
+                    </td>
+                    <td style={{ color: "var(--muted)", fontSize: "0.85rem" }}>
+                      {problem.timeComplexity || "N/A"}
+                    </td>
+                    <td>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                         <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: "var(--accent)", color: "#000", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem", fontWeight: 700 }}>
+                            {problem.createdBy?.name?.charAt(0) || "U"}
+                         </div>
+                         <span style={{ fontSize: "0.85rem", color: "var(--muted)" }}>{problem.createdBy?.name || "Unknown"}</span>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>

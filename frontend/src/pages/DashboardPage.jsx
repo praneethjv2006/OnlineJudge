@@ -1,16 +1,13 @@
 import { useEffect, useState } from "react";
-import { Link, useOutletContext } from "react-router-dom";
+import { useOutletContext } from "react-router-dom";
 import { loadDashboardStats } from "../services/authService";
+import Editor from "@monaco-editor/react";
 import { 
-  User, 
-  Trophy, 
   Calendar, 
   Flame, 
   Activity, 
   Code, 
   X, 
-  CheckCircle2, 
-  AlertTriangle,
   Info
 } from "lucide-react";
 
@@ -25,6 +22,7 @@ function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedSubCode, setSelectedSubCode] = useState(null);
   const [selectedSubTitle, setSelectedSubTitle] = useState("");
+  const [selectedSubLanguage, setSelectedSubLanguage] = useState("");
 
   useEffect(() => {
     let isMounted = true;
@@ -279,7 +277,7 @@ function DashboardPage() {
                 <tr>
                   <th>Verdict</th>
                   <th>Problem / Challenge</th>
-                  <th>Room</th>
+                  <th>Difficulty</th>
                   <th>Language</th>
                   <th>Date & Time</th>
                   <th style={{ textAlign: "right" }}>Action</th>
@@ -300,8 +298,10 @@ function DashboardPage() {
                       <td style={{ fontWeight: "600", color: "#fff" }}>
                         {sub.questionTitle}
                       </td>
-                      <td style={{ color: "var(--muted)" }}>
-                        {sub.contestTitle}
+                      <td>
+                        <span className={`difficulty-tag-v2 ${sub.difficulty || 'medium'}`}>
+                          {sub.difficulty || 'medium'}
+                        </span>
                       </td>
                       <td style={{ textTransform: "uppercase", fontSize: "0.85rem", fontWeight: "600" }}>
                         {sub.language}
@@ -323,6 +323,7 @@ function DashboardPage() {
                           onClick={() => {
                             setSelectedSubCode(sub.code);
                             setSelectedSubTitle(`${sub.questionTitle} (${sub.language.toUpperCase()})`);
+                            setSelectedSubLanguage(sub.language);
                           }}
                         >
                           <Code size={14} style={{ marginRight: "4px", verticalAlign: "middle" }} />
@@ -348,12 +349,23 @@ function DashboardPage() {
                 <X size={20} />
               </button>
             </div>
-            <div className="code-modal-body">
-              <pre className="code-preformatted">
-                <code>
-                  {selectedSubCode}
-                </code>
-              </pre>
+            <div className="code-modal-body" style={{ padding: 0 }}>
+              <Editor
+                height="450px"
+                language={selectedSubLanguage === 'cpp' ? 'cpp' : selectedSubLanguage === 'javascript' ? 'javascript' : selectedSubLanguage === 'python' ? 'python' : 'c'}
+                theme="vs-dark"
+                value={selectedSubCode}
+                options={{
+                  readOnly: true,
+                  fontSize: 14,
+                  minimap: { enabled: false },
+                  scrollBeyondLastLine: false,
+                  automaticLayout: true,
+                  lineNumbers: "on",
+                  folding: true,
+                  wordWrap: "on"
+                }}
+              />
             </div>
           </div>
         </div>

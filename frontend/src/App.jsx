@@ -6,6 +6,7 @@ import {
   Route,
   Routes,
   useNavigate,
+  useLocation,
 } from "react-router-dom";
 import PropTypes from "prop-types";
 import AuthPage from "./components/auth/AuthPage";
@@ -13,16 +14,21 @@ import NavBar from "./components/layout/NavBar";
 import CreateContestPage from "./pages/CreateContestPage";
 import ContestsPage from "./pages/ContestsPage";
 import ProblemsPage from "./pages/ProblemsPage";
+import ProblemSolvingPage from "./pages/ProblemSolvingPage";
 import ContestRoomPage from "./pages/ContestRoomPage";
 import HomePage from "./pages/HomePage";
 import DashboardPage from "./pages/DashboardPage";
 import { loadSession, signOut } from "./services/authService";
 
 function AppShell({ user, onSignOut }) {
+  const location = useLocation();
+  const isContestRoom = (location.pathname.startsWith("/contests/") && !location.pathname.endsWith("/create")) ||
+                       location.pathname.startsWith("/problems/");
+
   return (
     <div className="app-shell">
-      <NavBar user={user} onSignOut={onSignOut} />
-      <main className="app-main">
+      {!isContestRoom && <NavBar user={user} onSignOut={onSignOut} />}
+      <main className={isContestRoom ? "" : "app-main"}>
         <Outlet context={{ user }} />
       </main>
     </div>
@@ -39,10 +45,22 @@ AppShell.propTypes = {
 
 function AppRoutes() {
   const navigate = useNavigate();
-  const [user, setUser] = useState(null);
-  const [isBooting, setIsBooting] = useState(true);
+  const [user, setUser] = useState(() => {
+    // Optimistic loading: try to get user from localStorage immediately
+    const cachedUser = window.localStorage.getItem("user");
+    try {
+      return cachedUser ? JSON.parse(cachedUser) : null;
+    } catch {
+      return null;
+    }
+  });
 
   useEffect(() => {
+    const cachedUser = window.localStorage.getItem("user");
+    if (!cachedUser) {
+      return;
+    }
+
     let isMounted = true;
 
     const bootstrapSession = async () => {
@@ -55,10 +73,8 @@ function AppRoutes() {
       } catch {
         if (isMounted) {
           setUser(null);
-        }
-      } finally {
-        if (isMounted) {
-          setIsBooting(false);
+          window.localStorage.removeItem("user");
+          window.localStorage.removeItem("accessToken");
         }
       }
     };
@@ -84,18 +100,6 @@ function AppRoutes() {
     }
   };
 
-  if (isBooting) {
-    return (
-      <div className="boot-screen">
-        <div className="boot-card">
-          <span className="eyebrow">Loading session</span>
-          <h1>Preparing your judge workspace</h1>
-          <p>Restoring your secure session and syncing the current contest data.</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <Routes>
       <Route
@@ -106,6 +110,7 @@ function AppRoutes() {
         <Route index element={<Navigate to="/home" replace />} />
         <Route path="/home" element={<HomePage />} />
         <Route path="/problems" element={<ProblemsPage />} />
+        <Route path="/problems/:problemId" element={<ProblemSolvingPage />} />
         <Route path="/contests" element={<ContestsPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/contests/create" element={<CreateContestPage />} />

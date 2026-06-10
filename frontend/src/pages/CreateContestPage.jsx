@@ -10,7 +10,7 @@ const createTestCase = () => ({
 const createQuestion = () => ({
   title: "",
   prompt: "",
-  timeLimitMs: 1000,
+  timeLimitMs: 2000,
   testCases: [createTestCase()],
 });
 

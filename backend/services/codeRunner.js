@@ -24,8 +24,8 @@ const getLanguageConfig = (language) => {
     python: {
       sourceFile: "main.py",
       compile: null,
-      runCommand: process.platform === "win32" ? ["py", "-3", "main.py"] : ["python3", "main.py"],
-      fallbackRunCommands: [["python", "main.py"], ["py", "main.py"]],
+      runCommand: process.platform === "win32" ? ["python", "main.py"] : ["python3", "main.py"],
+      fallbackRunCommands: [["py", "-3", "main.py"], ["py", "main.py"], ["python3", "main.py"]],
     },
     javascript: {
       sourceFile: "main.js",
@@ -55,6 +55,7 @@ const runCommand = ({ command, args, cwd, input = "", timeLimitMs }) =>
     let stdout = "";
     let stderr = "";
     let timedOut = false;
+    const MAX_OUTPUT_LENGTH = 1024 * 1024; // 1MB limit
 
     const child = spawn(command, args, {
       cwd,
@@ -65,14 +66,18 @@ const runCommand = ({ command, args, cwd, input = "", timeLimitMs }) =>
     const timer = setTimeout(() => {
       timedOut = true;
       child.kill("SIGKILL");
-    }, timeLimitMs);
+    }, timeLimitMs + 1000); // Add 1s grace period for environment overhead
 
     child.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
+      if (stdout.length < MAX_OUTPUT_LENGTH) {
+        stdout += chunk.toString();
+      }
     });
 
     child.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
+      if (stderr.length < MAX_OUTPUT_LENGTH) {
+        stderr += chunk.toString();
+      }
     });
 
     child.on("error", (error) => {

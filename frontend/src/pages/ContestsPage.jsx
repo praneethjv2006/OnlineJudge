@@ -1,6 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useOutletContext } from "react-router-dom";
 import { joinContest, loadContests } from "../services/contestService";
+import { 
+  Lock, 
+  Clock, 
+  FileQuestion, 
+  ChevronRight, 
+  Search, 
+  Trophy, 
+  Sparkles,
+  Globe
+} from "lucide-react";
 
 const formatRemainingTime = (endAt) => {
   const remainingMs = new Date(endAt).getTime() - Date.now();
@@ -142,7 +152,7 @@ function ContestsPage() {
       <section className="panel contests-header-single">
         <div className="header-left">
           <div className="contests-heading">
-            <h1>Contests</h1>
+            <h1><Trophy size={24} style={{ marginRight: 12, verticalAlign: 'middle', color: 'var(--accent)' }} />Contests</h1>
           </div>
 
           <div className="segmented-control compact-toggle">
@@ -151,14 +161,14 @@ function ContestsPage() {
               className={visibility === "public" ? "segment active" : "segment"}
               onClick={() => setVisibility("public")}
             >
-              Public
+              <Globe size={14} style={{ marginRight: 6 }} /> Public
             </button>
             <button
               type="button"
               className={visibility === "private" ? "segment active" : "segment"}
               onClick={() => setVisibility("private")}
             >
-              Private
+              <Lock size={14} style={{ marginRight: 6 }} /> Private
             </button>
           </div>
         </div>
@@ -170,9 +180,11 @@ function ContestsPage() {
               className={showJoiner ? "secondary-action active" : "secondary-action"}
               onClick={openJoinPanel}
             >
+              <Search size={16} style={{ marginRight: 8 }} />
               {showJoiner ? "Hide join" : "Join contest"}
             </button>
             <Link to="/contests/create" className="primary-action">
+              <Sparkles size={16} style={{ marginRight: 8 }} />
               Create contest
             </Link>
           </div>
@@ -243,6 +255,7 @@ function ContestsPage() {
           <div className="empty-state loading-state">Loading contests...</div>
         ) : contests.length === 0 ? (
           <div className="empty-state">
+            <Trophy size={48} style={{ opacity: 0.2, marginBottom: 16 }} />
             <h3>No ongoing contests yet.</h3>
             <p>Create the first one to start a new round.</p>
           </div>
@@ -250,59 +263,50 @@ function ContestsPage() {
           <div className="contest-grid">
             {contests.map((contest) => {
               const totalQuestions = contest.questions.length;
-              const totalCases = contest.questions.reduce(
-                (sum, question) => sum + question.testCases.length,
-                0
-              );
               const canJoinDirectly = contest.visibility === "public";
 
               return (
                 <article 
-                  className="contest-card clickable-card" 
+                  className="professional-contest-card" 
                   key={contest._id}
                   onClick={() => canJoinDirectly ? joinPublicContest(contest._id) : setShowJoiner(true)}
                 >
-                  <div className="contest-card-head">
-                    <span className={contest.visibility === "public" ? "visibility-badge public" : "visibility-badge private"}>
-                      {contest.visibility === "public" ? "Public room" : "Private room"}
-                    </span>
-                    <span className="muted-copy">{formatRemainingTime(contest.endAt)}</span>
+                  <div className="card-header">
+                    <h3 className="card-title">{contest.title}</h3>
+                    <div className={`visibility-pill ${contest.visibility}`}>
+                      {contest.visibility === "public" ? <Globe size={12} /> : <Lock size={12} />}
+                      {contest.visibility}
+                    </div>
                   </div>
 
-                  <h3>{contest.title}</h3>
-                  <p>{contest.description || "No contest description provided."}</p>
+                  <p className="card-description">{contest.description || "No contest description provided."}</p>
 
-                  <dl className="contest-meta">
-                    <div>
-                      <dt>Questions</dt>
-                      <dd>{totalQuestions}</dd>
+                  <div className="card-stats">
+                    <div className="stat">
+                      <FileQuestion size={14} />
+                      <span>{totalQuestions} Problems</span>
                     </div>
-                    <div>
-                      <dt>Test cases</dt>
-                      <dd>{totalCases}</dd>
+                    <div className="stat">
+                      <Clock size={14} />
+                      <span>{contest.durationMinutes} Min</span>
                     </div>
-                    <div>
-                      <dt>Duration</dt>
-                      <dd>{contest.durationMinutes} min</dd>
+                    <div className="stat" style={{ marginLeft: "auto", color: "var(--accent)" }}>
+                      <Clock size={14} />
+                      <span>{formatRemainingTime(contest.endAt)}</span>
                     </div>
-                  </dl>
-
-                  <div className="contest-owner">
-                    <span>Created by</span>
-                    <strong>{contest.createdBy?.name || user?.name || "Organizer"}</strong>
                   </div>
 
-                  <div className="contest-card-actions">
-                    <button
-                      type="button"
-                      className="primary-button inline-button"
-                      disabled={isJoining}
-                    >
-                      {canJoinDirectly ? "Join room" : "Join with code"}
+                  <div className="card-footer">
+                    <div className="creator-info">
+                      <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: "rgba(255,255,255,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.7rem", fontWeight: 700, color: "#fff" }}>
+                        {(contest.createdBy?.name || user?.name || "O").charAt(0)}
+                      </div>
+                      <span>{contest.createdBy?.name || user?.name || "Organizer"}</span>
+                    </div>
+                    
+                    <button className="enter-button-mini">
+                      {canJoinDirectly ? "Enter" : "Join"} <ChevronRight size={14} style={{ marginLeft: "4px" }} />
                     </button>
-                    {!canJoinDirectly && (
-                      <span className="muted-copy">Private rooms require the generated contest code.</span>
-                    )}
                   </div>
                 </article>
               );

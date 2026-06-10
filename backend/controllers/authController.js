@@ -1,53 +1,14 @@
 const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const Submission = require("../models/Submission");
 const {
   buildTokens,
   clearRefreshCookie,
-  accessTokenSecret,
-  refreshTokenSecret,
   safeUser,
   setRefreshCookie,
+  resolveUserFromAccessToken,
+  resolveUserFromRefreshToken,
 } = require("../services/authSession");
-
-const resolveSessionUser = async (req) => {
-  const authHeader = req.headers.authorization || "";
-  const bearerToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
-  const refreshToken = req.cookies?.refreshToken;
-
-  if (!bearerToken && !refreshToken) {
-    return null;
-  }
-
-  if (bearerToken) {
-    try {
-      const payload = jwt.verify(bearerToken, accessTokenSecret);
-      const user = await User.findById(payload.id);
-
-      if (user) {
-        return { token: bearerToken, user };
-      }
-    } catch (err) {
-      // Access token verification failed (e.g. expired). Fallback to refresh token if available.
-    }
-  }
-
-  if (refreshToken) {
-    try {
-      const payload = jwt.verify(refreshToken, refreshTokenSecret);
-      const user = await User.findById(payload.id);
-
-      if (user && user.refreshToken === refreshToken) {
-        return { token: refreshToken, user };
-      }
-    } catch (err) {
-      // Refresh token verification failed
-    }
-  }
-
-  return null;
-};
 
 const signIn = async (req, res) => {
   try {
@@ -125,13 +86,13 @@ const signUp = async (req, res) => {
 
 const me = async (req, res) => {
   try {
-    const session = await resolveSessionUser(req);
+    const user = await resolveUserFromAccessToken(req);
 
-    if (!session) {
+    if (!user) {
       return res.status(401).json({ message: "Session expired. Please sign in again." });
     }
 
-    return res.json({ user: safeUser(session.user) });
+    return res.json({ user: safeUser(user) });
   } catch (error) {
     return res.status(401).json({ message: "Session expired. Please sign in again.", error: error.message });
   }
@@ -139,15 +100,15 @@ const me = async (req, res) => {
 
 const refreshSession = async (req, res) => {
   try {
-    const session = await resolveSessionUser(req);
+    const user = await resolveUserFromRefreshToken(req);
 
-    if (!session) {
+    if (!user) {
       return res.status(401).json({ message: "Session expired. Please sign in again." });
     }
 
-    const { accessToken, refreshToken } = buildTokens(session.user);
-    session.user.refreshToken = refreshToken;
-    await session.user.save();
+    const { accessToken, refreshToken } = buildTokens(user);
+    user.refreshToken = refreshToken;
+    await user.save();
 
     setRefreshCookie(res, refreshToken);
 
@@ -162,10 +123,10 @@ const refreshSession = async (req, res) => {
 
 const signOut = async (req, res) => {
   try {
-    const session = await resolveSessionUser(req);
+    const user = await resolveUserFromAccessToken(req) || await resolveUserFromRefreshToken(req);
 
-    if (session) {
-      await User.findByIdAndUpdate(session.user._id, { refreshToken: null });
+    if (user) {
+      await User.findByIdAndUpdate(user._id, { refreshToken: null });
     }
   } catch (error) {
     // Clear the client cookie even if the token can no longer be verified.
@@ -177,45 +138,62 @@ const signOut = async (req, res) => {
 
 const getMyStats = async (req, res) => {
   try {
-    const session = await resolveSessionUser(req);
+    const user = await resolveUserFromAccessToken(req);
 
-    if (!session) {
+    if (!user) {
       return res.status(401).json({ message: "Session expired. Please sign in again." });
     }
 
-    const userId = session.user._id;
+    const userId = user._id;
 
-    // Fetch all submissions for this user, populating the contest questions
+    // Fetch all submissions for this user, populating the contest questions and problem details
     const submissions = await Submission.find({ user: userId })
       .populate("contest", "title questions")
+      .populate("problem", "title difficulty")
       .sort({ createdAt: -1 });
 
     const solvedSet = new Set();
     submissions.forEach((sub) => {
-      if (sub.verdict === "Accepted" && sub.contest) {
-        solvedSet.add(`${sub.contest._id || sub.contest}-${sub.questionIndex}`);
+      if (sub.verdict === "Accepted") {
+        if (sub.contest) {
+          solvedSet.add(`contest-${sub.contest._id || sub.contest}-${sub.questionIndex}`);
+        } else if (sub.problem) {
+          solvedSet.add(`problem-${sub.problem._id || sub.problem}`);
+        }
       }
     });
 
     const totalSolved = solvedSet.size;
 
     return res.json({
-      user: safeUser(session.user),
+      user: safeUser(user),
       totalSolved,
       submissions: submissions.map((sub) => {
-        let questionTitle = `Question #${sub.questionIndex + 1}`;
-        if (sub.contest && Array.isArray(sub.contest.questions)) {
-          const q = sub.contest.questions[sub.questionIndex];
-          if (q && q.title) {
-            questionTitle = q.title;
+        let questionTitle = "Unknown Problem";
+        let difficulty = "medium";
+        let contestTitle = "Practice";
+
+        if (sub.problem) {
+          questionTitle = sub.problem.title || "Unknown Practice Problem";
+          difficulty = sub.problem.difficulty || "medium";
+        } else if (sub.contest) {
+          contestTitle = sub.contest.title || "Unknown Contest";
+          questionTitle = `Question #${sub.questionIndex + 1}`;
+          if (Array.isArray(sub.contest.questions)) {
+            const q = sub.contest.questions[sub.questionIndex];
+            if (q && q.title) {
+              questionTitle = q.title;
+            }
           }
         }
+
         return {
           _id: sub._id,
           contestId: sub.contest?._id,
-          contestTitle: sub.contest?.title || "Unknown Contest",
+          contestTitle,
           questionIndex: sub.questionIndex,
           questionTitle,
+          difficulty,
           language: sub.language,
           verdict: sub.verdict,
           code: sub.code,
@@ -235,5 +213,4 @@ module.exports = {
   signOut,
   signUp,
   getMyStats,
-  resolveSessionUser,
 };

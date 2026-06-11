@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useOutletContext } from "react-router-dom";
+import Lottie from "lottie-react";
 import { loadContests, joinContest } from "../services/contestService";
+import gif3 from "../assets/animations/gif3.json";
 import { 
   Trophy, 
   PlusCircle, 
@@ -98,46 +100,51 @@ function HomePage() {
 
   return (
     <section className="page-stack home-page">
-      {/* 1. HERO PANEL (LEETCODE / DEVELOPER GREETING) */}
-      <section className="dashboard-hero">
-        <div className="hero-main-content">
-          <div className="hero-eyebrow">
-            <Sparkles size={14} />
-            <span>Developer Center</span>
-          </div>
-          <h1 className="hero-title-main">
-            Welcome back, <br />
-            <span>{user?.name || "operator"}</span>.
-          </h1>
-          <p className="hero-description">
-            Your secure competitive arena and MERN compilation environment. Coordinate live contest rooms, compile single challenge testbeds, and track participant submission metrics.
-          </p>
-          <div className="hero-btn-group">
-            <button onClick={() => navigate("/problems")} className="primary-action active" style={{ display: "inline-flex", gap: "8px" }}>
-              <Compass size={16} /> Explore Problems
-            </button>
-            <button onClick={() => navigate("/contests/create")} className="secondary-action" style={{ display: "inline-flex", gap: "8px" }}>
-              <PlusCircle size={16} /> Create Arena
-            </button>
-          </div>
-        </div>
+      {/* 1. HERO PANEL (RE-DESIGNED LEETCODE STYLE) */}
+      <section className="dashboard-hero professional-hero">
+        <div className="hero-split-container">
+          <div className="hero-main-content">
+            <div className="hero-eyebrow">
+              <Sparkles size={14} />
+              <span>Developer Center</span>
+            </div>
+            <h1 className="hero-title-main">
+              Welcome back, <br />
+              <span>{user?.name || "operator"}</span>.
+            </h1>
+            <p className="hero-description">
+              Elevate your coding skills on the premier platform for technical interviews and competitive programming. Master algorithms, conquer data structures, and prepare for top-tier engineering roles.
+            </p>
+            <div className="hero-btn-group">
+              <button onClick={() => navigate("/problems")} className="primary-action active" style={{ display: "inline-flex", gap: "8px" }}>
+                <Compass size={16} /> Explore Problems
+              </button>
+              <button onClick={() => navigate("/contests/create")} className="secondary-action" style={{ display: "inline-flex", gap: "8px" }}>
+                <PlusCircle size={16} /> Create Arena
+              </button>
+            </div>
 
-        {/* Hero Quick Statistics */}
-        <div className="hero-stats">
-          <article className="panel-accent">
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--accent)", marginBottom: "4px" }}>
-              <ShieldCheck size={16} />
-              <strong>Secure Link</strong>
+            <div className="hero-stats-row">
+              <div className="hero-stat-item">
+                <span className="stat-label">System Status</span>
+                <span className="stat-value"><div className="pulse-dot-indicator" /> Operational</span>
+              </div>
+              <div className="hero-stat-item">
+                <span className="stat-label">Local Time</span>
+                <span className="stat-value" style={{ fontFamily: "monospace" }}>{currentTime || "--:--:--"}</span>
+              </div>
+              <div className="hero-stat-item">
+                <span className="stat-label">Session Secure</span>
+                <span className="stat-value" style={{ color: "var(--success)" }}><ShieldCheck size={12} /> Encrypted</span>
+              </div>
             </div>
-            <span>Cookie Session Active</span>
-          </article>
-          <article>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#ccc", marginBottom: "4px" }}>
-              <Clock size={16} />
-              <strong>Local Time</strong>
+          </div>
+
+          <div className="hero-visual-content">
+            <div className="hero-lottie-wrapper">
+              <Lottie animationData={gif3} loop={true} />
             </div>
-            <span style={{ fontFamily: "monospace", letterSpacing: "1px", fontSize: "1rem" }}>{currentTime || "--:--:--"}</span>
-          </article>
+          </div>
         </div>
       </section>
 
@@ -159,32 +166,52 @@ function HomePage() {
 
       {/* 2. DASHBOARD BODY (2 columns layout) */}
       <div className="dashboard-layout-grid">
-        {/* Left Side: Quick Actions & Live Contests */}
+        {/* Left Side: Daily Challenge & Live Contests */}
         <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
           
+          {/* Daily Challenge Card (LeetCode Style) */}
+          <div className="daily-challenge-card" onClick={() => navigate("/problems")}>
+            <div className="daily-card-header">
+              <div className="daily-label">
+                <Zap size={14} fill="var(--accent)" color="var(--accent)" />
+                Daily Coding Challenge
+              </div>
+              <div className="daily-date">{new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+            </div>
+            <div className="daily-card-body">
+              <div className="daily-problem-info">
+                <h3>Two Sum IV - Input is a BST</h3>
+                <div className="difficulty-tag medium">Medium</div>
+              </div>
+              <button className="solve-button">
+                Solve Now <ArrowRight size={16} />
+              </button>
+            </div>
+          </div>
+
           {/* Quick Actions Panel */}
           <div>
-            <h3 style={{ margin: "0 0 12px 4px", fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.15em", color: "var(--muted)" }}>Platform Shortcuts</h3>
+            <h3 style={{ margin: "0 0 12px 4px", fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.15em", color: "var(--muted)" }}>Quick Navigation</h3>
             <div className="quick-actions-panel">
+              <div className="action-card-interactive" onClick={() => navigate("/problems")}>
+                <div className="action-card-icon">
+                  <Terminal size={22} />
+                </div>
+                <h3>Problems</h3>
+                <p>Browse algorithm challenges across multiple categories.</p>
+                <span className="action-card-link-text">
+                  View all <ArrowRight size={14} />
+                </span>
+              </div>
+
               <div className="action-card-interactive" onClick={() => navigate("/contests")}>
                 <div className="action-card-icon">
                   <Trophy size={22} />
                 </div>
-                <h3>Explore Rooms</h3>
-                <p>Browse public competitive coding contests and join active rooms.</p>
+                <h3>Contests</h3>
+                <p>Compete in real-time with other developers worldwide.</p>
                 <span className="action-card-link-text">
-                  Go to contests <ArrowRight size={14} />
-                </span>
-              </div>
-
-              <div className="action-card-interactive" onClick={() => navigate("/contests/create")}>
-                <div className="action-card-icon">
-                  <PlusCircle size={22} />
-                </div>
-                <h3>Create Room</h3>
-                <p>Configure custom problems, validation input cases, and runtime limitations.</p>
-                <span className="action-card-link-text">
-                  New contest <ArrowRight size={14} />
+                  Enter arena <ArrowRight size={14} />
                 </span>
               </div>
 
@@ -192,10 +219,10 @@ function HomePage() {
                 <div className="action-card-icon">
                   <Activity size={22} />
                 </div>
-                <h3>Dashboard</h3>
-                <p>Verify active grading statuses, problems solved, and history heatmap.</p>
+                <h3>Stats</h3>
+                <p>Track your progress, submission history, and ranking.</p>
                 <span className="action-card-link-text">
-                  View dashboard <ArrowRight size={14} />
+                  My profile <ArrowRight size={14} />
                 </span>
               </div>
             </div>
@@ -204,7 +231,7 @@ function HomePage() {
           {/* Quick Contests Feed */}
           <div>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", margin: "0 4px 12px" }}>
-              <h3 style={{ margin: 0, fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.15em", color: "var(--muted)" }}>Active Contests Feed</h3>
+              <h3 style={{ margin: 0, fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.15em", color: "var(--muted)" }}>Featured Contests</h3>
               <Link to="/contests" style={{ fontSize: "0.85rem", color: "var(--accent)", fontWeight: "600", display: "flex", alignItems: "center", gap: "4px" }}>
                 All rooms <ArrowRight size={12} />
               </Link>
@@ -242,9 +269,39 @@ function HomePage() {
 
         </div>
 
-        {/* Right Side: System Status Monitor */}
+        {/* Right Side: Progress & Community */}
         <div>
-          <h3 style={{ margin: "0 0 12px 4px", fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.15em", color: "var(--muted)" }}>Engine Architecture</h3>
+          <h3 style={{ margin: "0 0 12px 4px", fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.15em", color: "var(--muted)" }}>Your Progress</h3>
+          <div className="progress-container-premium">
+            <div className="progress-stat-card">
+              <div className="progress-stat-header">
+                <span className="stat-name">Solved Problems</span>
+                <span className="stat-count">24 / 150</span>
+              </div>
+              <div className="progress-bar-wrapper">
+                <div className="progress-bar-fill" style={{ width: '16%' }}></div>
+              </div>
+            </div>
+
+            <div className="progress-stat-card">
+              <div className="progress-stat-header">
+                <span className="stat-name">Contest Rating</span>
+                <span className="stat-count">1,540</span>
+              </div>
+              <div className="progress-bar-wrapper">
+                <div className="progress-bar-fill" style={{ width: '60%', background: 'var(--accent)' }}></div>
+              </div>
+            </div>
+
+            <div className="community-cta-card">
+              <Sparkles size={24} color="var(--accent)" />
+              <h4>Join the Community</h4>
+              <p>Discuss problems, share solutions, and learn from top programmers.</p>
+              <button className="ghost-button">Join Discord</button>
+            </div>
+          </div>
+
+          <h3 style={{ margin: "24px 0 12px 4px", fontSize: "0.85rem", textTransform: "uppercase", letterSpacing: "0.15em", color: "var(--muted)" }}>Platform Engine</h3>
           <div className="system-status-container">
             
             <div className="status-indicator-tile">
@@ -266,47 +323,16 @@ function HomePage() {
             <div className="status-indicator-tile">
               <div className="status-tile-left">
                 <div className="status-tile-icon">
-                  <Server size={20} />
-                </div>
-                <div className="status-tile-info">
-                  <span>Database Link</span>
-                  <strong>Sync connection</strong>
-                </div>
-              </div>
-              <div className="status-badge-pill online">
-                <div className="pulse-dot-indicator" />
-                Active
-              </div>
-            </div>
-
-            <div className="status-indicator-tile">
-              <div className="status-tile-left">
-                <div className="status-tile-icon">
                   <ShieldCheck size={20} />
                 </div>
                 <div className="status-tile-info">
-                  <span>Authentication</span>
-                  <strong>Cookie Guard active</strong>
+                  <span>Session Guard</span>
+                  <strong>Cookie Active</strong>
                 </div>
               </div>
               <div className="status-badge-pill online">
                 <CheckCircle2 size={14} />
                 Verified
-              </div>
-            </div>
-
-            <div className="status-indicator-tile">
-              <div className="status-tile-left">
-                <div className="status-tile-icon">
-                  <Trophy size={20} />
-                </div>
-                <div className="status-tile-info">
-                  <span>API Latency</span>
-                  <strong>Main routing gateway</strong>
-                </div>
-              </div>
-              <div className="status-badge-pill latency">
-                12ms latency
               </div>
             </div>
 

@@ -1,0 +1,54 @@
+import Groq from "groq-sdk";
+
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY
+});
+
+app.post("/analyze", async (req, res) => {
+  const { code } = req.body;
+
+  const completion = await groq.chat.completions.create({
+    model: "qwen/qwen3-32b",
+    messages: [
+      {
+        role: "user",
+        content: `
+Analyze this code.
+
+Return:
+1. Time Complexity
+2. Space Complexity
+3. Explanation
+
+Code:
+${code}
+`
+      }
+    ],
+    temperature: 0
+  });
+
+  res.json({
+    result: completion.choices[0].message.content
+  });
+});
+
+// use these models in this order if any model tokens expire go tonext model
+const models = [
+  "qwen/qwen3-32b",
+  "llama-3.3-70b-versatile",
+  "openai/gpt-oss-120b"
+];
+
+for (const model of models) {
+  try {
+    const response = await groq.chat.completions.create({
+      model,
+      messages
+    });
+
+    return response;
+  } catch (err) {
+    if (err.status !== 429) throw err;
+  }
+}

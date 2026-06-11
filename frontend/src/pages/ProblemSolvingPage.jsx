@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { useNavigate, useParams, useOutletContext } from "react-router-dom";
 import { 
   getProblem, 
   getProblemSubmissions, 
-  runProblemCode 
+  runProblemCode,
+  analyzeCode
 } from "../services/problemService";
 import Editor from "@monaco-editor/react";
 import { 
@@ -12,6 +13,10 @@ import {
   ChevronUp, 
   ChevronDown, 
   RotateCcw, 
+  Trophy, 
+  Clock, 
+  ChevronRight,
+  ChevronLeft,
   Terminal,
   CheckCircle2,
   XCircle,
@@ -20,7 +25,9 @@ import {
   History,
   ArrowLeft,
   Loader2,
-  Info
+  Info,
+  Wand2,
+  X
 } from "lucide-react";
 
 const LANGUAGE_OPTIONS = [
@@ -87,6 +94,13 @@ function ProblemSolvingPage() {
   const [isResizing, setIsResizing] = useState(false);
   const [submissions, setSubmissions] = useState([]);
   const [isSubmissionsLoading, setIsSubmissionsLoading] = useState(false);
+
+  // Analyze state
+  const [isAnalyzeOpen, setIsAnalyzeOpen] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState(null);
+  const [analysisType, setAnalysisType] = useState(null);
+  const analyzeRef = useRef(null);
 
   const fetchSubmissions = useCallback(async () => {
     setIsSubmissionsLoading(true);
@@ -228,6 +242,113 @@ function ProblemSolvingPage() {
     }
   };
 
+  const handleAnalyze = async (type) => {
+    setIsAnalyzeOpen(false);
+    setIsAnalyzing(true);
+    setAnalysisType(type);
+    setAnalysisResult(null);
+    try {
+      const data = await analyzeCode({ 
+        code, 
+        type, 
+        problemId 
+      });
+      setAnalysisResult(data.result);
+    } catch (err) {
+      setAnalysisResult("Failed to analyze code. Please try again.");
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const renderAnalysisContent = () => {
+    if (!analysisResult) return null;
+
+    if (analysisType === 'complexity') {
+      const lines = analysisResult.split('\n');
+      const timeLine = lines.find(l => l.toLowerCase().includes('time complexity'))?.split(':')[1]?.trim() || "N/A";
+      const spaceLine = lines.find(l => l.toLowerCase().includes('space complexity'))?.split(':')[1]?.trim() || "N/A";
+
+      return (
+        <div className="analysis-cards">
+          <div className="analysis-card complexity-card">
+            <div className="card-icon"><Clock size={20} /></div>
+            <div className="card-info">
+              <label>Time Complexity</label>
+              <strong>{timeLine}</strong>
+            </div>
+          </div>
+          <div className="analysis-card complexity-card">
+            <div className="card-icon"><Code2 size={20} /></div>
+            <div className="card-info">
+              <label>Space Complexity</label>
+              <strong>{spaceLine}</strong>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (analysisType === 'edgeCases') {
+      const points = analysisResult.split('\n').filter(p => p.trim() !== '');
+      return (
+        <div className="analysis-list">
+          {points.map((point, i) => (
+            <div key={i} className="analysis-list-item">
+              <div className="item-bullet">{i + 1}</div>
+              <div className="item-text">{point.replace(/^\d+\.\s*/, '').trim()}</div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (analysisType === 'review') {
+      const lines = analysisResult.split('\n');
+      const verdict = lines.find(l => l.toLowerCase().startsWith('verdict:'))?.split(':')[1]?.trim() || "Analyzed";
+      const optimizations = lines.filter(l => !l.toLowerCase().startsWith('verdict:') && !l.toLowerCase().startsWith('optimizations:') && l.trim() !== '');
+
+      return (
+        <div className="analysis-review">
+          <div className={`verdict-badge ${verdict.toLowerCase().includes('correct') ? 'verdict-pass' : verdict.toLowerCase().includes('incorrect') ? 'verdict-fail' : 'verdict-warn'}`}>
+            {verdict}
+          </div>
+          {optimizations.length > 0 && (
+            <div className="optimizations-section">
+              <h4>Key Optimizations</h4>
+              <div className="analysis-list">
+                {optimizations.map((opt, i) => (
+                  <div key={i} className="analysis-list-item">
+                    <div className="item-bullet opt-bullet"><Info size={14} /></div>
+                    <div className="item-text">{opt.replace(/^\d+\.\s*/, '').trim()}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <div className="analysis-content-box">
+        <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>
+          {analysisResult}
+        </pre>
+      </div>
+    );
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (analyzeRef.current && !analyzeRef.current.contains(event.target)) {
+        setIsAnalyzeOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   if (isLoading) return <div className="loading-state">Loading...</div>;
   if (!problem) return <div className="error-state">{error || "Problem not found."}</div>;
 
@@ -255,6 +376,24 @@ function ProblemSolvingPage() {
               {isRunning ? <Loader2 size={14} className="anim-spin" /> : <Play size={14} />} 
               Run
             </button>
+
+            <div className="analyze-wrapper" ref={analyzeRef}>
+              <button 
+                className={`btn-analyze ${isAnalyzeOpen ? 'active' : ''}`}
+                onClick={() => setIsAnalyzeOpen(!isAnalyzeOpen)}
+                disabled={isRunning || isSubmitting || isAnalyzing}
+              >
+                <Wand2 size={14} /> Analyze
+              </button>
+              {isAnalyzeOpen && (
+                <div className="analyze-dropdown">
+                  <button onClick={() => handleAnalyze('complexity')}>Complexity</button>
+                  <button onClick={() => handleAnalyze('edgeCases')}>Edge Cases</button>
+                  <button onClick={() => handleAnalyze('review')}>Review</button>
+                </div>
+              )}
+            </div>
+
             <button 
               className={`btn-submit ${isSubmitting ? 'loading' : ''}`} 
               onClick={handleSubmit} 
@@ -270,7 +409,36 @@ function ProblemSolvingPage() {
         </div>
       </header>
 
+      {isAnalyzing && (
+        <div className="analysis-overlay">
+          <div className="analysis-modal">
+            <div className="modal-header">
+              <h3>Analyzing Code...</h3>
+            </div>
+            <div className="modal-body flex-center">
+              <Loader2 size={32} className="anim-spin" />
+              <p>Fetching {analysisType} analysis...</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {analysisResult && (
+        <div className="analysis-overlay" onClick={() => setAnalysisResult(null)}>
+          <div className="analysis-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>{analysisType === 'complexity' ? 'Code Complexity' : analysisType === 'edgeCases' ? 'Critical Edge Cases' : 'AI Code Review'}</h3>
+              <button className="close-btn" onClick={() => setAnalysisResult(null)}><X size={18} /></button>
+            </div>
+            <div className="modal-body">
+              {renderAnalysisContent()}
+            </div>
+          </div>
+        </div>
+      )}
+
       <main className="workspace-main">
+
         <div className="leetcode-layout" style={{ gridTemplateColumns: `${leftWidth}% 6px 1fr` }}>
           <div className="leetcode-left-panel">
             <div className="panel-tabs">

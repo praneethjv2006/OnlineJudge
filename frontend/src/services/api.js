@@ -1,9 +1,8 @@
 import axios from "axios";
 
-const IS_DEPLOYED = true; // Set to true for production, false for local development
-const BASE_URL = IS_DEPLOYED 
-  ? "https://apexjudge-backend-production.up.railway.app/api" 
-  : "http://localhost:5000/api";
+// IS_DEPLOYED is derived from the environment variable if needed, 
+// but BASE_URL is now directly controlled by VITE_API_URL in .env
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 const api = axios.create({
   baseURL: BASE_URL,

@@ -7,6 +7,8 @@ import {
   analyzeCode
 } from "../services/problemService";
 import Editor from "@monaco-editor/react";
+import Modal from "../components/common/Modal";
+import { toast } from "../components/common/Toast";
 import { 
   FileText, 
   Code2, 
@@ -94,6 +96,8 @@ function ProblemSolvingPage() {
   const [isResizing, setIsResizing] = useState(false);
   const [submissions, setSubmissions] = useState([]);
   const [isSubmissionsLoading, setIsSubmissionsLoading] = useState(false);
+  const [isConfirmSubmitOpen, setIsConfirmSubmitOpen] = useState(false);
+  const [isConfirmResetOpen, setIsConfirmResetOpen] = useState(false);
 
   // Analyze state
   const [isAnalyzeOpen, setIsAnalyzeOpen] = useState(false);
@@ -207,16 +211,15 @@ function ProblemSolvingPage() {
         newStatuses[idx] = { status: res.verdict === 'Accepted' ? 'passed' : 'failed' };
       });
       setTestCaseStatuses(newStatuses);
-    } catch {
-      // Execution error
+    } catch (err) {
+      toast.error(err.message || "Execution error.");
     } finally {
       setIsRunning(false);
     }
   };
 
-  const handleSubmit = async () => {
-    if (!problem) return;
-    if (!window.confirm("Submit your solution?")) return;
+  const executeSubmit = async () => {
+    setIsConfirmSubmitOpen(false);
     setIsSubmitting(true);
     setIsConsoleExpanded(true);
     setConsoleTab("result");
@@ -229,17 +232,34 @@ function ProblemSolvingPage() {
       });
       setRunResults(data.results || []);
       const newStatuses = {};
-      (data.results || []).forEach((res, idx) => {
-        newStatuses[idx] = { status: res.verdict === 'Accepted' ? 'passed' : 'failed' };
+      const allPassed = (data.results || []).every((res, idx) => {
+        const passed = res.verdict === 'Accepted';
+        newStatuses[idx] = { status: passed ? 'passed' : 'failed' };
+        return passed;
       });
       setTestCaseStatuses(newStatuses);
-      alert("Submitted successfully!");
+      
+      if (allPassed) {
+        toast.success("All test cases passed! Submitted successfully.");
+      } else {
+        toast.error("Some test cases failed.");
+      }
       fetchSubmissions();
-    } catch {
-      alert("Submission failed.");
+    } catch (err) {
+      toast.error(err.message || "Submission failed.");
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleSubmit = () => {
+    if (!problem) return;
+    if (!user) {
+      toast.info("Please sign in to submit your solution.");
+      navigate("/auth");
+      return;
+    }
+    setIsConfirmSubmitOpen(true);
   };
 
   const handleAnalyze = async (type) => {
@@ -437,6 +457,58 @@ function ProblemSolvingPage() {
         </div>
       )}
 
+      <Modal
+        isOpen={isConfirmSubmitOpen}
+        onClose={() => setIsConfirmSubmitOpen(false)}
+        title="Submit Solution"
+        footer={
+          <>
+            <button
+              className="modal-btn modal-btn-cancel"
+              onClick={() => setIsConfirmSubmitOpen(false)}
+            >
+              Cancel
+            </button>
+            <button
+              className="modal-btn modal-btn-submit"
+              onClick={executeSubmit}
+            >
+              Submit
+            </button>
+          </>
+        }
+      >
+        <p>Are you sure you want to submit? Your code will be evaluated against all test cases.</p>
+      </Modal>
+
+      <Modal
+        isOpen={isConfirmResetOpen}
+        onClose={() => setIsConfirmResetOpen(false)}
+        title="Reset Code"
+        footer={
+          <>
+            <button
+              className="modal-btn modal-btn-cancel"
+              onClick={() => setIsConfirmResetOpen(false)}
+            >
+              Cancel
+            </button>
+            <button
+              className="modal-btn modal-btn-danger"
+              onClick={() => {
+                setCode(DEFAULT_CODE_TEMPLATES[language] || DEFAULT_CODE_TEMPLATES.cpp);
+                setIsConfirmResetOpen(false);
+                toast.success("Code reset to default template.");
+              }}
+            >
+              Reset
+            </button>
+          </>
+        }
+      >
+        <p>Are you sure you want to reset your code to the default template? Your current changes will be lost.</p>
+      </Modal>
+
       <main className="workspace-main">
 
         <div className="leetcode-layout" style={{ gridTemplateColumns: `${leftWidth}% 6px 1fr` }}>
@@ -514,7 +586,7 @@ function ProblemSolvingPage() {
                     {LANGUAGE_OPTIONS.map(opt => <option key={opt.id} value={opt.id}>{opt.label}</option>)}
                   </select>
                 </div>
-                <button className="reset-btn" onClick={() => setCode(DEFAULT_CODE_TEMPLATES[language])} title="Reset Code">
+                <button className="reset-btn" onClick={() => setIsConfirmResetOpen(true)} title="Reset Code">
                   <RotateCcw size={14} />
                 </button>
               </div>

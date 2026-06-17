@@ -74,39 +74,47 @@ function NavBar({ user, onSignOut }) {
         </nav>
 
         <div className="nav-profile-section" ref={menuRef}>
-          <button
-            type="button"
-            className={`profile-trigger ${isMenuOpen ? 'active' : ''}`}
-            onClick={() => setIsMenuOpen((current) => !current)}
-          >
-            <div className="user-avatar">
-              {user?.name?.[0]?.toUpperCase() || "U"}
-            </div>
-            <div className="user-info-mini">
-              <span className="user-name-short">{user?.name?.split(' ')[0] || "User"}</span>
-              <ChevronDown size={14} className={`chevron ${isMenuOpen ? 'rotated' : ''}`} />
-            </div>
-          </button>
-
-          {isMenuOpen && (
-            <div className="profile-dropdown-menu">
-              <div className="dropdown-header">
-                <div className="header-avatar">
-                   {user?.name?.[0]?.toUpperCase() || "U"}
+          {user ? (
+            <>
+              <button
+                type="button"
+                className={`profile-trigger ${isMenuOpen ? 'active' : ''}`}
+                onClick={() => setIsMenuOpen((current) => !current)}
+              >
+                <div className="user-avatar">
+                  {user?.name?.[0]?.toUpperCase() || "U"}
                 </div>
-                <div className="header-meta">
-                  <span className="full-name">{user?.name || "User"}</span>
-                  <span className="user-email">{user?.email || "active session"}</span>
+                <div className="user-info-mini">
+                  <span className="user-name-short">{user?.name?.split(' ')[0] || "User"}</span>
+                  <ChevronDown size={14} className={`chevron ${isMenuOpen ? 'rotated' : ''}`} />
                 </div>
-              </div>
-              
-              <div className="dropdown-divider"></div>
-              
-              <button type="button" className="dropdown-item danger" onClick={handleSignOut}>
-                <LogOut size={16} />
-                <span>Sign Out</span>
               </button>
-            </div>
+
+              {isMenuOpen && (
+                <div className="profile-dropdown-menu">
+                  <div className="dropdown-header">
+                    <div className="header-avatar">
+                       {user?.name?.[0]?.toUpperCase() || "U"}
+                    </div>
+                    <div className="header-meta">
+                      <span className="full-name">{user?.name || "User"}</span>
+                      <span className="user-email">{user?.email || "active session"}</span>
+                    </div>
+                  </div>
+                  
+                  <div className="dropdown-divider"></div>
+                  
+                  <button type="button" className="dropdown-item danger" onClick={handleSignOut}>
+                    <LogOut size={16} />
+                    <span>Sign Out</span>
+                  </button>
+                </div>
+              )}
+            </>
+          ) : (
+            <Link to="/auth" className="primary-action" style={{ padding: "8px 24px", minHeight: "40px", fontSize: "0.9rem" }}>
+              Sign In
+            </Link>
           )}
         </div>
       </div>

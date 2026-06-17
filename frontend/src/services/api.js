@@ -1,7 +1,12 @@
 import axios from "axios";
 
+const IS_DEPLOYED = true; // Set to true for production, false for local development
+const BASE_URL = IS_DEPLOYED 
+  ? "https://apexjudge-backend-production.up.railway.app/api" 
+  : "http://localhost:5000/api";
+
 const api = axios.create({
-  baseURL: "http://localhost:5000/api",
+  baseURL: BASE_URL,
   withCredentials: true,
 });
 
@@ -66,7 +71,7 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const response = await axios.post("http://localhost:5000/api/auth/refresh", {}, {
+        const response = await axios.post(`${api.defaults.baseURL}/auth/refresh`, {}, {
           withCredentials: true,
         });
         const { accessToken } = response.data;

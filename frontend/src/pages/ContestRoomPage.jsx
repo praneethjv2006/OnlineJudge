@@ -9,6 +9,8 @@ import {
 } from "../services/contestService";
 import { analyzeCode } from "../services/problemService";
 import Editor from "@monaco-editor/react";
+import Modal from "../components/common/Modal";
+import { toast } from "../components/common/Toast";
 import { 
   FileText, 
   Code2, 
@@ -108,6 +110,10 @@ function ContestRoomPage() {
   const [isResizing, setIsResizing] = useState(false);
   const [submissions, setSubmissions] = useState([]);
   const [isSubmissionsLoading, setIsSubmissionsLoading] = useState(false);
+  const [isConfirmSubmitOpen, setIsConfirmSubmitOpen] = useState(false);
+  const [isConfirmStartOpen, setIsConfirmStartOpen] = useState(false);
+  const [isConfirmEndOpen, setIsConfirmEndOpen] = useState(false);
+  const [isConfirmResetOpen, setIsConfirmResetOpen] = useState(false);
 
   // Analyze state
   const [isAnalyzeOpen, setIsAnalyzeOpen] = useState(false);
@@ -222,16 +228,20 @@ function ContestRoomPage() {
         newStatuses[idx] = { status: res.verdict === 'Accepted' ? 'passed' : 'failed' };
       });
       setTestCaseStatuses(newStatuses);
-    } catch {
-      // Execution error
+    } catch (err) {
+      toast.error(err.message || "Execution error.");
     } finally {
       setIsRunning(false);
     }
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (!currentQuestion || !canRun) return;
-    if (!window.confirm("Submit your solution?")) return;
+    setIsConfirmSubmitOpen(true);
+  };
+
+  const executeSubmit = async () => {
+    setIsConfirmSubmitOpen(false);
     setIsSubmitting(true);
     setIsConsoleExpanded(true);
     try {
@@ -242,10 +252,15 @@ function ContestRoomPage() {
         isSubmit: true,
       });
       setRunResults(data.results || []);
-      alert("Submitted successfully!");
+      const allPassed = (data.results || []).every(res => res.verdict === 'Accepted');
+      if (allPassed) {
+        toast.success("All test cases passed! Submitted successfully.");
+      } else {
+        toast.error("Some test cases failed.");
+      }
       fetchSubmissions();
-    } catch {
-      alert("Submission failed.");
+    } catch (err) {
+      toast.error(err.message || "Submission failed.");
     } finally {
       setIsSubmitting(false);
     }
@@ -359,25 +374,33 @@ function ContestRoomPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleStartContest = async () => {
-    if (!window.confirm("Start the contest?")) return;
+  const handleStartContest = () => {
+    setIsConfirmStartOpen(true);
+  };
+
+  const executeStartContest = async () => {
+    setIsConfirmStartOpen(false);
     try {
       const data = await startContest(contestId);
       setContest(data.contest);
-      alert("Contest started!");
+      toast.success("Contest started!");
     } catch {
-      alert("Failed to start contest.");
+      toast.error("Failed to start contest.");
     }
   };
 
-  const handleEndContest = async () => {
-    if (!window.confirm("End the contest?")) return;
+  const handleEndContest = () => {
+    setIsConfirmEndOpen(true);
+  };
+
+  const executeEndContest = async () => {
+    setIsConfirmEndOpen(false);
     try {
       const data = await endContest(contestId);
       setContest(data.contest);
-      alert("Contest ended!");
+      toast.success("Contest ended!");
     } catch {
-      alert("Failed to end contest.");
+      toast.error("Failed to end contest.");
     }
   };
 
@@ -506,6 +529,107 @@ function ContestRoomPage() {
         </div>
       )}
 
+      {/* Confirmation Modals */}
+      <Modal
+        isOpen={isConfirmSubmitOpen}
+        onClose={() => setIsConfirmSubmitOpen(false)}
+        title="Submit Solution"
+        footer={
+          <>
+            <button
+              className="modal-btn modal-btn-cancel"
+              onClick={() => setIsConfirmSubmitOpen(false)}
+            >
+              Cancel
+            </button>
+            <button
+              className="modal-btn modal-btn-submit"
+              onClick={executeSubmit}
+            >
+              Submit
+            </button>
+          </>
+        }
+      >
+        <p>Are you sure you want to submit? Your code will be evaluated against hidden test cases.</p>
+      </Modal>
+
+      <Modal
+        isOpen={isConfirmStartOpen}
+        onClose={() => setIsConfirmStartOpen(false)}
+        title="Start Contest"
+        footer={
+          <>
+            <button
+              className="modal-btn modal-btn-cancel"
+              onClick={() => setIsConfirmStartOpen(false)}
+            >
+              Cancel
+            </button>
+            <button
+              className="modal-btn modal-btn-success"
+              onClick={executeStartContest}
+            >
+              Start
+            </button>
+          </>
+        }
+      >
+        <p>Are you sure you want to start the contest? This will make all problems visible to participants.</p>
+      </Modal>
+
+      <Modal
+        isOpen={isConfirmEndOpen}
+        onClose={() => setIsConfirmEndOpen(false)}
+        title="End Contest"
+        footer={
+          <>
+            <button
+              className="modal-btn modal-btn-cancel"
+              onClick={() => setIsConfirmEndOpen(false)}
+            >
+              Cancel
+            </button>
+            <button
+              className="modal-btn modal-btn-danger"
+              onClick={executeEndContest}
+            >
+              End
+            </button>
+          </>
+        }
+      >
+        <p>This will immediately end the contest. No further submissions will be accepted.</p>
+      </Modal>
+
+      <Modal
+        isOpen={isConfirmResetOpen}
+        onClose={() => setIsConfirmResetOpen(false)}
+        title="Reset Code"
+        footer={
+          <>
+            <button
+              className="modal-btn modal-btn-cancel"
+              onClick={() => setIsConfirmResetOpen(false)}
+            >
+              Cancel
+            </button>
+            <button
+              className="modal-btn modal-btn-danger"
+              onClick={() => {
+                setCode(DEFAULT_CODE_TEMPLATES[language] || DEFAULT_CODE_TEMPLATES.cpp);
+                setIsConfirmResetOpen(false);
+                toast.success("Code reset to default template.");
+              }}
+            >
+              Reset
+            </button>
+          </>
+        }
+      >
+        <p>Are you sure you want to reset your code to the default template? Your current changes will be lost.</p>
+      </Modal>
+
       <main className="workspace-main">
 
         <div className="leetcode-layout" style={{ gridTemplateColumns: `${leftWidth}% 6px 1fr` }}>
@@ -605,7 +729,7 @@ function ContestRoomPage() {
                     {LANGUAGE_OPTIONS.map(opt => <option key={opt.id} value={opt.id}>{opt.label}</option>)}
                   </select>
                 </div>
-                <button className="reset-btn" onClick={() => setCode(DEFAULT_CODE_TEMPLATES[language])} title="Reset Code">
+                <button className="reset-btn" onClick={() => setIsConfirmResetOpen(true)} title="Reset Code">
                   <RotateCcw size={14} />
                 </button>
               </div>

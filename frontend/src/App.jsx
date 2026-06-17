@@ -19,6 +19,7 @@ import ContestRoomPage from "./pages/ContestRoomPage";
 import HomePage from "./pages/HomePage";
 import DashboardPage from "./pages/DashboardPage";
 import { loadSession, signOut } from "./services/authService";
+import ToastContainer from "./components/common/Toast";
 
 function AppShell({ user, onSignOut }) {
   const location = useLocation();
@@ -106,17 +107,21 @@ function AppRoutes() {
         path="/auth"
         element={user ? <Navigate to="/home" replace /> : <AuthPage onAuthenticated={handleAuthenticated} />}
       />
-      <Route element={user ? <AppShell user={user} onSignOut={handleSignOut} /> : <Navigate to="/auth" replace />}>
+      <Route element={<AppShell user={user} onSignOut={handleSignOut} />}>
         <Route index element={<Navigate to="/home" replace />} />
         <Route path="/home" element={<HomePage />} />
         <Route path="/problems" element={<ProblemsPage />} />
         <Route path="/problems/:problemId" element={<ProblemSolvingPage />} />
-        <Route path="/contests" element={<ContestsPage />} />
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/contests/create" element={<CreateContestPage />} />
-        <Route path="/contests/:contestId" element={<ContestRoomPage />} />
+        
+        {/* Protected Routes */}
+        <Route element={user ? <Outlet /> : <Navigate to="/auth" replace />}>
+          <Route path="/contests" element={<ContestsPage />} />
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/contests/create" element={<CreateContestPage />} />
+          <Route path="/contests/:contestId" element={<ContestRoomPage />} />
+        </Route>
       </Route>
-      <Route path="*" element={<Navigate to={user ? "/home" : "/auth"} replace />} />
+      <Route path="*" element={<Navigate to="/home" replace />} />
     </Routes>
   );
 }
@@ -125,6 +130,7 @@ function App() {
   return (
     <BrowserRouter>
       <AppRoutes />
+      <ToastContainer />
     </BrowserRouter>
   );
 }

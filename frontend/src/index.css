@@ -23,6 +23,46 @@
   --shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 
+/* Professional Minimalist Modal Buttons */
+.modal-btn {
+  padding: 6px 16px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.modal-btn-cancel {
+  background: #3d3d3d;
+  color: #eff1f6;
+  border-color: #4d4d4d;
+}
+
+.modal-btn-cancel:hover {
+  background: #4d4d4d;
+}
+
+.modal-btn-submit {
+  background: #ffa116;
+  color: #000;
+  font-weight: 600;
+}
+
+.modal-btn-submit:hover {
+  background: #ffb84d;
+}
+
+.modal-btn-danger {
+  background: #e74c3c;
+  color: white;
+}
+
+.modal-btn-danger:hover {
+  background: #c0392b;
+}
+
 body {
   margin: 0;
   background-color: var(--bg);
@@ -4014,4 +4054,181 @@ body.fullscreen-contest-active .topbar {
 .featured-challenge-banner:hover .featured-banner-action {
   color: var(--accent-hover);
 }
+
+/* LeetCode Style Modal Container */
+.modal-root-wrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 2000;
+  transition: opacity 0.2s ease;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.modal-root-wrapper.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Backdrop */
+.modal-backdrop-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: -1;
+}
+
+/* Modal Content Container */
+.modal-content-container {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  background-color: #282828;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.5);
+  transform: scale(0.95) translateY(10px);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-root-wrapper.is-open .modal-content-container {
+  transform: scale(1) translateY(0);
+}
+
+/* Modal Header */
+.modal-header-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.modal-title-text {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0;
+}
+
+.modal-close-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  padding: 6px;
+  border-radius: 6px;
+  color: #999999;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.modal-close-button:hover {
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+/* Modal Body */
+.modal-body-container {
+  padding: 24px;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: #c7c7c7;
+}
+
+.modal-body-container p {
+  margin: 0;
+}
+
+/* Modal Footer */
+.modal-footer-container {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px;
+  background-color: #242424;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Modal Buttons */
+.modal-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.modal-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.modal-btn-cancel {
+  background-color: transparent;
+  color: #eff1f6;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.modal-btn-cancel:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.modal-btn-submit {
+  background-color: var(--accent);
+  color: #0a0a0a;
+  font-weight: 600;
+}
+
+.modal-btn-submit:hover {
+  background-color: var(--accent-hover);
+}
+
+.modal-btn-submit:active {
+  background-color: #e08e10;
+}
+
+.modal-btn-success {
+  background-color: var(--success);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.modal-btn-success:hover {
+  opacity: 0.9;
+}
+
+.modal-btn-danger {
+  background-color: var(--danger);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.modal-btn-danger:hover {
+  opacity: 0.9;
+}
+
 

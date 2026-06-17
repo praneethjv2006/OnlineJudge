@@ -1,0 +1,25 @@
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - COMPILER_SERVICE_URL=http://compiler:5001
+      # - MONGODB_URI=mongodb://mongo:27017/onlinejudge
+    depends_on:
+      - compiler
+
+  compiler:
+    build: ./compiler
+    ports:
+      - "5001:5001"
+    environment:
+      - PORT=5001
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend

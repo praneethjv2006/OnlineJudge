@@ -14,6 +14,7 @@ import {
   Search
 } from "lucide-react";
 import { getProblems, createProblem } from "../services/problemService";
+import { toast } from "../components/common/Toast";
 
 const ProblemsPage = () => {
   const [problems, setProblems] = useState([]);
@@ -83,9 +84,10 @@ const ProblemsPage = () => {
         testCases: [{ input: "", expectedOutput: "" }],
       });
       fetchProblems();
+      toast.success("Problem created successfully!");
     } catch (error) {
       console.error("Error creating problem:", error);
-      alert("Failed to create problem. " + (error.response?.data?.message || ""));
+      toast.error("Failed to create problem. " + (error.response?.data?.message || ""));
     }
   };
 

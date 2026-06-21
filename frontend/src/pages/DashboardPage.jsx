@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useOutletContext } from "react-router-dom";
+import { useAppContext } from "../App";
 import { loadDashboardStats } from "../services/authService";
 import Editor from "@monaco-editor/react";
 import { 
@@ -17,7 +17,7 @@ const getMonthName = (monthIndex) => {
 };
 
 function DashboardPage() {
-  const { user: sessionUser } = useOutletContext();
+  const { user: sessionUser } = useAppContext();
   const [stats, setStats] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedSubCode, setSelectedSubCode] = useState(null);

@@ -8,7 +8,8 @@ import {
   LogOut, 
   ChevronDown,
   Terminal,
-  Code
+  Code,
+  Swords
 } from "lucide-react";
 
 function NavBar({ user, onSignOut }) {
@@ -66,6 +67,10 @@ function NavBar({ user, onSignOut }) {
           <NavLink to="/contests" className={({ isActive }) => (isActive ? "nav-item active" : "nav-item") }>
             <Trophy size={18} />
             <span>Contests</span>
+          </NavLink>
+          <NavLink to="/shadow-code" className={({ isActive }) => (isActive ? "nav-item nav-item-shadow active" : "nav-item nav-item-shadow") }>
+            <Swords size={18} />
+            <span>Shadow Code</span>
           </NavLink>
           <NavLink to="/dashboard" className={({ isActive }) => (isActive ? "nav-item active" : "nav-item") }>
             <Activity size={18} />

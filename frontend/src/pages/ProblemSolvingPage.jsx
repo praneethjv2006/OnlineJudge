@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, useRef } from "react";
-import { useNavigate, useParams, useOutletContext } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
+import { useAppContext } from "../App";
 import { 
   getProblem, 
   getProblemSubmissions, 
@@ -76,7 +77,7 @@ const fs = require("fs");
 function ProblemSolvingPage() {
   const { problemId } = useParams();
   const navigate = useNavigate();
-  const { user } = useOutletContext();
+  const { user } = useAppContext();
   const [problem, setProblem] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");

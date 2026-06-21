@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useOutletContext } from "react-router-dom";
-import Lottie from "lottie-react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAppContext } from "../App";
+import LottieComponent from "lottie-react";
+const Lottie = LottieComponent?.default || LottieComponent;
 import { loadContests, joinContest } from "../services/contestService";
 import gif3 from "../assets/animations/gif3.json";
 import { 
@@ -40,7 +42,7 @@ const platformSpecifications = [
 ];
 
 function HomePage() {
-  const { user } = useOutletContext();
+  const { user } = useAppContext();
   const navigate = useNavigate();
   
   const [contests, setContests] = useState([]);

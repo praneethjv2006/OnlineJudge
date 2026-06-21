@@ -1,6 +1,7 @@
 import { useState } from "react";
 import PropTypes from "prop-types";
-import Lottie from "lottie-react";
+import LottieComponent from "lottie-react";
+const Lottie = LottieComponent?.default || LottieComponent;
 import animationData from "../../assets/animations/gif5.json";
 import { signIn, signUp } from "../../services/authService";
 

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, useRef } from "react";
-import { useNavigate, useParams, useOutletContext } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
+import { useAppContext } from "../App";
 import { 
   getContestSubmissions, 
   loadContest, 
@@ -90,7 +91,7 @@ const formatCountdown = (dateValue, referenceTime = Date.now()) => {
 function ContestRoomPage() {
   const { contestId } = useParams();
   const navigate = useNavigate();
-  const { user } = useOutletContext();
+  const { user } = useAppContext();
   const [contest, setContest] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");

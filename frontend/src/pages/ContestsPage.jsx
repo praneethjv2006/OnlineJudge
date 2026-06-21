@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useLocation, useNavigate, useOutletContext } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useAppContext } from "../App";
 import { joinContest, loadContests } from "../services/contestService";
 import { 
   Lock, 
@@ -31,7 +32,7 @@ const formatRemainingTime = (endAt) => {
 };
 
 function ContestsPage() {
-  const { user } = useOutletContext();
+  const { user } = useAppContext();
   const navigate = useNavigate();
   const location = useLocation();
   const initialLoadRef = useRef(true);

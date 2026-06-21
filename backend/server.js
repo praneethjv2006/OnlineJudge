@@ -40,7 +40,14 @@ app.get("/", (req, res) => {
 });
 
 app.get("/api/health", (req, res) => {
-  res.json({ status: "ok" });
+  res.json({
+    status: "ok",
+    features: {
+      structuredProblems: true,
+      problemEdit: true,
+      problemDelete: true,
+    },
+  });
 });
 
 app.use("/api/auth", authRoutes);

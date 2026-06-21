@@ -5,6 +5,72 @@ const { resolveUserFromAccessToken } = require("../services/authSession");
 const { SUPPORTED_LANGUAGES, runCodeAgainstTestCases } = require("../services/codeRunner");
 const Groq = require("groq-sdk");
 
+const cleanText = (value) => (typeof value === "string" ? value.trim() : "");
+
+const normalizeProblemInput = (body = {}) => {
+  const formalStatement = cleanText(body.formalStatement);
+  const statement = cleanText(body.statement) || formalStatement;
+  const testCases = Array.isArray(body.testCases)
+    ? body.testCases
+        .map((testCase) => ({
+          input: cleanText(testCase?.input),
+          expectedOutput: cleanText(testCase?.expectedOutput),
+        }))
+        .filter((testCase) => testCase.input && testCase.expectedOutput)
+    : [];
+  const examples = Array.isArray(body.examples)
+    ? body.examples
+        .map((example) => ({
+          input: cleanText(example?.input),
+          output: cleanText(example?.output),
+          explanation: cleanText(example?.explanation),
+        }))
+        .filter((example) => example.input || example.output || example.explanation)
+    : [];
+  const tags = Array.isArray(body.tags)
+    ? body.tags
+    : String(body.tags || "").split(",");
+
+  return {
+    title: cleanText(body.title),
+    difficulty: cleanText(body.difficulty).toLowerCase(),
+    statement,
+    formalStatement,
+    problemStory: cleanText(body.problemStory),
+    inputFormat: cleanText(body.inputFormat),
+    outputFormat: cleanText(body.outputFormat),
+    constraints: cleanText(body.constraints),
+    notes: cleanText(body.notes),
+    timeComplexity: cleanText(body.timeComplexity),
+    spaceComplexity: cleanText(body.spaceComplexity),
+    timeLimit: Number(body.timeLimit) || 2000,
+    memoryLimit: Number(body.memoryLimit) || 256,
+    tags: tags.map((tag) => cleanText(String(tag))).filter(Boolean),
+    examples,
+    testCases,
+  };
+};
+
+const validateProblemInput = (problemData) => {
+  if (!problemData.title) return "Problem title is required.";
+  if (!["easy", "medium", "hard"].includes(problemData.difficulty)) {
+    return "Difficulty must be easy, medium, or hard.";
+  }
+  if (!problemData.statement) return "A formal problem statement is required.";
+  if (!problemData.inputFormat) return "Input format is required.";
+  if (!problemData.outputFormat) return "Output format is required.";
+  if (!problemData.constraints) return "Constraints are required.";
+  if (problemData.examples.length === 0) return "At least one public example is required.";
+  if (problemData.testCases.length === 0) return "At least one judge test case is required.";
+  if (problemData.timeLimit < 100 || problemData.timeLimit > 60000) {
+    return "Time limit must be between 100 and 60000 milliseconds.";
+  }
+  if (problemData.memoryLimit < 16 || problemData.memoryLimit > 4096) {
+    return "Memory limit must be between 16 and 4096 MB.";
+  }
+  return null;
+};
+
 const listProblems = async (req, res) => {
   try {
     const problems = await Problem.find()
@@ -23,66 +89,13 @@ const createProblem = async (req, res) => {
       return res.status(401).json({ message: "Please sign in to create a problem." });
     }
 
-    const {
-      title,
-      difficulty,
-      statement,
-      timeComplexity,
-      spaceComplexity,
-      testCases,
-      tags,
-      timeLimit,
-      memoryLimit,
-      problemStory,
-      formalStatement,
-      inputFormat,
-      outputFormat,
-      constraints,
-      examples,
-      notes,
-    } = req.body;
-
-    if (!title || !difficulty || !statement || !testCases || testCases.length === 0) {
-      return res.status(400).json({
-        message: "Title, difficulty, statement, and at least one test case are required.",
-      });
+    const problemData = normalizeProblemInput(req.body);
+    const validationError = validateProblemInput(problemData);
+    if (validationError) {
+      return res.status(400).json({ message: validationError });
     }
 
-    const problem = await Problem.create({
-      title: title.trim(),
-      difficulty,
-      statement: statement.trim(),
-      timeComplexity: timeComplexity?.trim(),
-      spaceComplexity: spaceComplexity?.trim(),
-      testCases: testCases.map((tc) => ({
-        input: tc.input?.trim(),
-        expectedOutput: tc.expectedOutput?.trim(),
-      })),
-      tags: Array.isArray(tags)
-        ? tags.map((tag) => String(tag).trim()).filter(Boolean)
-        : String(tags || "")
-            .split(",")
-            .map((tag) => tag.trim())
-            .filter(Boolean),
-      timeLimit: Number(timeLimit) || 2000,
-      memoryLimit: Number(memoryLimit) || 256,
-      problemStory: problemStory?.trim(),
-      formalStatement: formalStatement?.trim(),
-      inputFormat: inputFormat?.trim(),
-      outputFormat: outputFormat?.trim(),
-      constraints: constraints?.trim(),
-      examples: Array.isArray(examples)
-        ? examples
-            .filter((example) => example?.input || example?.output || example?.explanation)
-            .map((example) => ({
-              input: example.input?.trim(),
-              output: example.output?.trim(),
-              explanation: example.explanation?.trim(),
-            }))
-        : [],
-      notes: notes?.trim(),
-      createdBy: user._id,
-    });
+    const problem = await Problem.create({ ...problemData, createdBy: user._id });
 
     return res.status(201).json({
       message: "Problem created successfully.",
@@ -90,6 +103,48 @@ const createProblem = async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ message: "Unable to create problem.", error: error.message });
+  }
+};
+
+const updateProblem = async (req, res) => {
+  try {
+    const user = await resolveUserFromAccessToken(req);
+    if (!user) {
+      return res.status(401).json({ message: "Please sign in to edit a problem." });
+    }
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(404).json({ message: "Problem not found." });
+    }
+
+    const problem = await Problem.findOne({
+      _id: req.params.id,
+      createdBy: user._id,
+    });
+    if (!problem) {
+      const problemExists = await Problem.exists({ _id: req.params.id });
+      return res.status(problemExists ? 403 : 404).json({
+        message: problemExists
+          ? "Only the problem author can edit this problem."
+          : "Problem not found.",
+      });
+    }
+
+    const problemData = normalizeProblemInput(req.body);
+    const validationError = validateProblemInput(problemData);
+    if (validationError) {
+      return res.status(400).json({ message: validationError });
+    }
+
+    problem.set(problemData);
+    await problem.save();
+    await problem.populate("createdBy", "name email");
+
+    return res.json({
+      message: "Problem updated successfully.",
+      problem,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "Unable to update problem.", error: error.message });
   }
 };
 
@@ -336,6 +391,7 @@ const deleteProblem = async (req, res) => {
 module.exports = {
   listProblems,
   createProblem,
+  updateProblem,
   getProblem,
   runProblemCode,
   getProblemSubmissions,

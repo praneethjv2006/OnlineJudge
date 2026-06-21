@@ -1,5 +1,10 @@
 import api from "./api";
 
+export const getApiHealth = async () => {
+  const response = await api.get("/health");
+  return response.data;
+};
+
 export const getProblems = async () => {
   const response = await api.get("/problems");
   return response.data.problems;
@@ -12,6 +17,11 @@ export const getProblem = async (id) => {
 
 export const createProblem = async (problemData) => {
   const response = await api.post("/problems", problemData);
+  return response.data.problem;
+};
+
+export const updateProblem = async (id, problemData) => {
+  const response = await api.put(`/problems/${id}`, problemData);
   return response.data.problem;
 };
 

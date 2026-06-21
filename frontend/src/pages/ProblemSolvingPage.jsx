@@ -9,6 +9,7 @@ import {
 } from "../services/problemService";
 import Editor from "@monaco-editor/react";
 import Modal from "../components/common/Modal";
+import ProblemText from "../components/problems/ProblemText";
 import { toast } from "../components/common/Toast";
 import { 
   FileText, 
@@ -527,25 +528,29 @@ function ProblemSolvingPage() {
 
                     {/* Header */}
                     <div className="problem-display-header">
-                      <div className="problem-display-kicker">Practice problem</div>
+                      <div className="problem-display-kicker">
+                        Practice problem
+                        {problem.createdBy?.name && <span>by {problem.createdBy.name}</span>}
+                      </div>
                       <h1 className="problem-display-title">{problem.title}</h1>
                       <div className="problem-display-meta">
                         <span className={`problem-display-difficulty ${problem.difficulty}`}>
                           {problem.difficulty}
                         </span>
-                        {problem.timeLimit && (
-                          <span className="problem-display-stat">
-                            <Clock size={14} /> <span><small>Time limit</small>{problem.timeLimit} ms</span>
-                          </span>
-                        )}
-                        {problem.memoryLimit && (
-                          <span className="problem-display-stat">
-                            <Terminal size={14} /> <span><small>Memory limit</small>{problem.memoryLimit} MB</span>
-                          </span>
-                        )}
+                        <span className="problem-display-stat">
+                          <Clock size={14} /> <span><small>Time limit</small>{problem.timeLimit || 2000} ms</span>
+                        </span>
+                        <span className="problem-display-stat">
+                          <Terminal size={14} /> <span><small>Memory limit</small>{problem.memoryLimit || 256} MB</span>
+                        </span>
                         {problem.timeComplexity && (
                           <span className="problem-display-stat">
-                            <Info size={14} /> <span><small>Target</small>{problem.timeComplexity}</span>
+                            <Info size={14} /> <span><small>Expected time</small>{problem.timeComplexity}</span>
+                          </span>
+                        )}
+                        {problem.spaceComplexity && (
+                          <span className="problem-display-stat">
+                            <Code2 size={14} /> <span><small>Expected space</small>{problem.spaceComplexity}</span>
                           </span>
                         )}
                       </div>
@@ -560,98 +565,104 @@ function ProblemSolvingPage() {
                       )}
                     </div>
 
-                    {/* Problem Story */}
-                    {problem.problemStory && (
-                      <section className="problem-section story-section">
-                        <h3 className="problem-section-title">
-                          <Info size={15} /> Story
-                        </h3>
-                        <div className="problem-section-content">{problem.problemStory}</div>
-                      </section>
-                    )}
+                    <div className="problem-document">
+                      {problem.problemStory && (
+                        <aside className="problem-story-callout">
+                          <span>Story</span>
+                          <ProblemText text={problem.problemStory} />
+                        </aside>
+                      )}
 
-                    {/* Formal Statement */}
-                    <section className="problem-section">
-                      <h3 className="problem-section-title">
-                        <Code2 size={15} /> Problem Statement
-                      </h3>
-                      <div className="problem-section-content">
-                        {problem.formalStatement || problem.statement}
-                      </div>
-                    </section>
-
-                    {/* Input Format */}
-                    {problem.inputFormat && (
                       <section className="problem-section">
                         <h3 className="problem-section-title">
-                          <ArrowLeft size={15} style={{ transform: 'rotate(135deg)' }} /> Input Format
+                          <Code2 size={15} /> Problem Statement
                         </h3>
-                        <div className="problem-section-content">{problem.inputFormat}</div>
-                      </section>
-                    )}
-
-                    {/* Output Format */}
-                    {problem.outputFormat && (
-                      <section className="problem-section">
-                        <h3 className="problem-section-title">
-                          <ArrowLeft size={15} style={{ transform: 'rotate(-45deg)' }} /> Output Format
-                        </h3>
-                        <div className="problem-section-content">{problem.outputFormat}</div>
-                      </section>
-                    )}
-
-                    {/* Constraints */}
-                    {problem.constraints && (
-                      <section className="problem-section constraints-section">
-                        <h3 className="problem-section-title">
-                          <XCircle size={15} /> Constraints
-                        </h3>
-                        <div className="problem-section-content">{problem.constraints}</div>
-                      </section>
-                    )}
-
-                    {/* Examples */}
-                    {(problem.examples?.length > 0 || problem.testCases?.length > 0) && (
-                      <section className="problem-section examples-section">
-                        <h3 className="problem-section-title">
-                          <CheckCircle2 size={15} /> Examples
-                        </h3>
-                        <div className="problem-examples-container">
-                          {(problem.examples?.length > 0 ? problem.examples : problem.testCases.slice(0, 3)).map((ex, i) => (
-                            <div key={i} className="problem-example-card">
-                              <div className="example-card-header">
-                                <span>Example {i + 1}</span>
-                              </div>
-                              <div className="example-card-body">
-                                <div className="example-io-row">
-                                  <div className="example-io-label">Input</div>
-                                  <pre className="example-io-value">{ex.input}</pre>
-                                </div>
-                                <div className="example-io-row">
-                                  <div className="example-io-label">Output</div>
-                                  <pre className="example-io-value">{ex.output || ex.expectedOutput}</pre>
-                                </div>
-                                {ex.explanation && (
-                                  <div className="example-explanation">
-                                    <strong>Explanation: </strong>{ex.explanation}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          ))}
+                        <div className="problem-section-content">
+                          <ProblemText text={problem.formalStatement || problem.statement} />
                         </div>
                       </section>
-                    )}
 
-                    {/* Notes / Hints */}
-                    {problem.notes && (
-                      <section className="problem-section notes-section">
-                        <h3 className="problem-section-title">
-                          <Terminal size={15} /> Notes & Hints
-                        </h3>
-                        <div className="problem-notes-box">{problem.notes}</div>
-                      </section>
-                    )}
+                      {problem.inputFormat && (
+                        <section className="problem-section">
+                          <h3 className="problem-section-title">
+                            <ArrowLeft size={15} style={{ transform: 'rotate(135deg)' }} /> Input Format
+                          </h3>
+                          <div className="problem-section-content">
+                            <ProblemText text={problem.inputFormat} />
+                          </div>
+                        </section>
+                      )}
+
+                      {problem.outputFormat && (
+                        <section className="problem-section">
+                          <h3 className="problem-section-title">
+                            <ArrowLeft size={15} style={{ transform: 'rotate(-45deg)' }} /> Output Format
+                          </h3>
+                          <div className="problem-section-content">
+                            <ProblemText text={problem.outputFormat} />
+                          </div>
+                        </section>
+                      )}
+
+                      {problem.constraints && (
+                        <section className="problem-section constraints-section">
+                          <h3 className="problem-section-title">
+                            <XCircle size={15} /> Constraints
+                          </h3>
+                          <div className="constraint-list">
+                            {problem.constraints.split("\n").filter(Boolean).map((constraint, index) => (
+                              <code key={`${constraint}-${index}`}>{constraint.trim()}</code>
+                            ))}
+                          </div>
+                        </section>
+                      )}
+
+                      {(problem.examples?.length > 0 || problem.testCases?.length > 0) && (
+                        <section className="problem-section examples-section">
+                          <h3 className="problem-section-title">
+                            <CheckCircle2 size={15} /> Examples
+                          </h3>
+                          <div className="problem-examples-container">
+                            {(problem.examples?.length > 0 ? problem.examples : problem.testCases.slice(0, 3)).map((ex, i) => (
+                              <div key={i} className="problem-example-card">
+                                <div className="example-card-header">
+                                  <span>Example {i + 1}</span>
+                                </div>
+                                <div className="example-card-body">
+                                  <div className="example-io-grid">
+                                    <div className="example-io-row">
+                                      <div className="example-io-label">Input</div>
+                                      <pre className="example-io-value">{ex.input}</pre>
+                                    </div>
+                                    <div className="example-io-row">
+                                      <div className="example-io-label">Output</div>
+                                      <pre className="example-io-value">{ex.output || ex.expectedOutput}</pre>
+                                    </div>
+                                  </div>
+                                  {ex.explanation && (
+                                    <div className="example-explanation">
+                                      <strong>Explanation</strong>
+                                      <ProblemText text={ex.explanation} />
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </section>
+                      )}
+
+                      {problem.notes && (
+                        <section className="problem-section notes-section">
+                          <h3 className="problem-section-title">
+                            <Terminal size={15} /> Notes & Hints
+                          </h3>
+                          <div className="problem-notes-box">
+                            <ProblemText text={problem.notes} />
+                          </div>
+                        </section>
+                      )}
+                    </div>
 
                   </div>
                 </div>

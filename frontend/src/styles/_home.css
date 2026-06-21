@@ -1,0 +1,149 @@
+/* Daily Challenge Card */
+.daily-challenge-card {
+  background: linear-gradient(135deg, rgba(255, 161, 22, 0.12) 0%, rgba(255, 161, 22, 0.02) 100%), #1e1e1e;
+  border: 1px solid rgba(255, 161, 22, 0.2);
+  border-radius: 20px;
+  padding: 24px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.daily-challenge-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(255, 161, 22, 0.4);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+}
+
+.daily-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.daily-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.daily-date {
+  font-size: 0.85rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.daily-card-body {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.daily-problem-info h3 {
+  margin: 0 0 6px 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.solve-button {
+  background: var(--accent);
+  color: #000;
+  border: none;
+  border-radius: 12px;
+  padding: 10px 20px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.solve-button:hover {
+  background: var(--accent-hover);
+  transform: translateX(4px);
+}
+
+/* Progress Section Styles */
+.progress-container-premium {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.progress-stat-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  padding: 16px 20px;
+}
+
+.progress-stat-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.stat-name {
+  font-size: 0.85rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.stat-count {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.progress-bar-wrapper {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: var(--success);
+  border-radius: 3px;
+}
+
+.community-cta-card {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 20px;
+  padding: 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.community-cta-card h4 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.community-cta-card p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.clickable-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.05);
+}

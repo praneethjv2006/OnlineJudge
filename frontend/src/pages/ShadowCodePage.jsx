@@ -1,83 +1,140 @@
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Canvas, useFrame } from "@react-three/fiber";
+import { useGLTF, useAnimations, Environment, OrbitControls } from "@react-three/drei";
+import * as THREE from "three";
 
-/* ── Animated Ninja SVG with multiple keyframe-driven parts ─────────────── */
-function AnimatedNinja() {
+// ─── 3D Model Configuration (Tweak values here) ─────────────────────────────
+const NINJA_SCALE = 2.5;             // Size/scale of the 3D model
+const NINJA_ANIMATION_SPEED = 0.9;  // Speed of the animation (1.0 = normal, smaller = slower)
+const NINJA_PAUSE_SECONDS = 0;     // Seconds to pause before restarting the animation
+
+/* ── GLB Ninja Model with animations ────────────────────────────────────── */
+function NinjaModel({ url }) {
+  const groupRef = useRef();
+  const { scene, animations } = useGLTF(url);
+  const { actions, names } = useAnimations(animations, groupRef);
+
+  // Play the first available animation slower, with a pause before loops
+  useEffect(() => {
+    if (names.length > 0) {
+      const action = actions[names[0]];
+      if (action) {
+        action.reset().play();
+        action.setLoop(THREE.LoopOnce, 1);
+        action.clampWhenFinished = true;
+        action.timeScale = NINJA_ANIMATION_SPEED; // Slow down the animation speed
+
+        const mixer = action.getMixer();
+        const handleFinished = (e) => {
+          if (e.action === action) {
+            setTimeout(() => {
+              if (action) {
+                action.reset().play();
+              }
+            }, NINJA_PAUSE_SECONDS * 1000); // Wait configured seconds before repeating the animation
+          }
+        };
+
+        mixer.addEventListener("finished", handleFinished);
+        return () => {
+          mixer.removeEventListener("finished", handleFinished);
+          action.stop();
+        };
+      }
+    }
+  }, [actions, names]);
+
+  // Gentle idle float only when no animations exist to avoid overlapping rotations
+  useFrame((state) => {
+    if (names.length === 0 && groupRef.current) {
+      groupRef.current.position.y = Math.sin(state.clock.elapsedTime * 0.8) * 0.06;
+      groupRef.current.rotation.y = Math.sin(state.clock.elapsedTime * 0.3) * 0.04;
+    }
+  });
+
   return (
-    <svg
-      className="ninja-figure"
-      viewBox="0 0 240 380"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-    >
-      {/* Ground shadow */}
-      <ellipse cx="120" cy="360" rx="55" ry="8" fill="#ffa116" opacity="0.08" className="ninja-ground-pulse" />
-
-      {/* Cloak / body */}
-      <path
-        d="M120 135 Q85 175 78 230 Q72 280 85 320 L120 330 L155 320 Q168 280 162 230 Q155 175 120 135Z"
-        fill="#0d0d0d"
-        stroke="#1a1a1a"
-        strokeWidth="1"
-        className="ninja-body-breathe"
+    <group ref={groupRef}>
+      <primitive
+        object={scene}
+        scale={NINJA_SCALE}
+        position={[0, -2.4, 0]}
+        rotation={[0, Math.PI * 0.1, 0]}
       />
-      {/* Inner cloak fold lines */}
-      <path d="M100 200 Q110 250 105 310" stroke="#1a1a1a" strokeWidth="1.5" opacity="0.4" fill="none" />
-      <path d="M140 200 Q130 250 135 310" stroke="#1a1a1a" strokeWidth="1.5" opacity="0.4" fill="none" />
-
-      {/* Head */}
-      <circle cx="120" cy="105" r="30" fill="#111" className="ninja-head-bob" />
-      {/* Mask wrapping */}
-      <path d="M90 113 Q120 130 150 113 L150 100 Q120 117 90 100 Z" fill="#151515" />
-      {/* Headband */}
-      <path d="M90 92 Q120 82 150 92" stroke="#ffa116" strokeWidth="3.5" fill="none" strokeLinecap="round" className="ninja-headband-glow" />
-      {/* Headband tail flowing */}
-      <path d="M150 92 Q165 95 178 88 Q188 80 195 85" stroke="#ffa116" strokeWidth="2.5" fill="none" strokeLinecap="round" className="ninja-scarf-flow" />
-      <path d="M150 92 Q162 100 172 98 Q180 95 185 100" stroke="#ffa116" strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.6" className="ninja-scarf-flow-2" />
-
-      {/* Eyes - glowing slit */}
-      <rect x="101" y="100" width="38" height="5" rx="2.5" fill="#ffa116" opacity="0.9" className="ninja-eye-glow" />
-      {/* Eye glow aura */}
-      <ellipse cx="120" cy="102" rx="22" ry="6" fill="#ffa116" opacity="0.15" className="ninja-eye-aura" />
-
-      {/* Left arm holding katana — raised */}
-      <line x1="90" y1="180" x2="50" y2="140" stroke="#0d0d0d" strokeWidth="14" strokeLinecap="round" />
-      {/* Katana blade */}
-      <line x1="50" y1="140" x2="18" y2="80" stroke="#c0c0c0" strokeWidth="2.5" strokeLinecap="round" className="ninja-blade-gleam" />
-      <line x1="18" y1="80" x2="12" y2="65" stroke="#e8e8e8" strokeWidth="1.5" strokeLinecap="round" />
-      {/* Katana guard (tsuba) */}
-      <ellipse cx="50" cy="140" rx="6" ry="3" fill="#444" stroke="#666" strokeWidth="1" transform="rotate(-35 50 140)" />
-      {/* Katana handle */}
-      <line x1="50" y1="140" x2="58" y2="155" stroke="#2a1a0a" strokeWidth="4" strokeLinecap="round" />
-
-      {/* Right arm — ready stance */}
-      <line x1="150" y1="180" x2="180" y2="210" stroke="#0d0d0d" strokeWidth="14" strokeLinecap="round" />
-      {/* Shuriken in right hand */}
-      <g transform="translate(180, 210)" className="ninja-shuriken-spin">
-        <polygon points="0,-8 3,-3 8,0 3,3 0,8 -3,3 -8,0 -3,-3" fill="#888" stroke="#aaa" strokeWidth="0.5" />
-      </g>
-
-      {/* Left leg */}
-      <line x1="105" y1="328" x2="85" y2="350" stroke="#0d0d0d" strokeWidth="14" strokeLinecap="round" />
-      {/* Right leg — slight stance */}
-      <line x1="135" y1="328" x2="152" y2="350" stroke="#0d0d0d" strokeWidth="14" strokeLinecap="round" />
-
-      {/* Energy particles around ninja */}
-      <circle cx="45" cy="120" r="2" fill="#ffa116" opacity="0.6" className="ninja-spark-1" />
-      <circle cx="195" cy="150" r="1.5" fill="#ffa116" opacity="0.5" className="ninja-spark-2" />
-      <circle cx="30" cy="200" r="1.5" fill="#ffa116" opacity="0.4" className="ninja-spark-3" />
-      <circle cx="210" cy="100" r="2" fill="#ffa116" opacity="0.3" className="ninja-spark-4" />
-    </svg>
+    </group>
   );
 }
 
+/* ── Fallback SVG ninja when GLB is loading ─────────────────────────────── */
+function FallbackNinja() {
+  return (
+    <div className="sc-ninja-wrapper" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <svg
+        viewBox="0 0 240 380"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        style={{ width: "100%", height: "100%", filter: "drop-shadow(0 0 30px rgba(255,161,22,0.15))" }}
+        aria-hidden="true"
+      >
+        <ellipse cx="120" cy="360" rx="55" ry="8" fill="#ffa116" opacity="0.08" className="ninja-ground-pulse" />
+        <path d="M120 135 Q85 175 78 230 Q72 280 85 320 L120 330 L155 320 Q168 280 162 230 Q155 175 120 135Z" fill="#0d0d0d" stroke="#1a1a1a" strokeWidth="1" className="ninja-body-breathe" />
+        <circle cx="120" cy="105" r="30" fill="#111" className="ninja-head-bob" />
+        <path d="M90 92 Q120 82 150 92" stroke="#ffa116" strokeWidth="3.5" fill="none" strokeLinecap="round" className="ninja-headband-glow" />
+        <rect x="101" y="100" width="38" height="5" rx="2.5" fill="#ffa116" opacity="0.9" className="ninja-eye-glow" />
+        <line x1="90" y1="180" x2="50" y2="140" stroke="#0d0d0d" strokeWidth="14" strokeLinecap="round" />
+        <line x1="50" y1="140" x2="18" y2="80" stroke="#c0c0c0" strokeWidth="2.5" strokeLinecap="round" className="ninja-blade-gleam" />
+        <circle cx="45" cy="120" r="2" fill="#ffa116" opacity="0.6" className="ninja-spark-1" />
+        <circle cx="195" cy="150" r="1.5" fill="#ffa116" opacity="0.5" className="ninja-spark-2" />
+      </svg>
+    </div>
+  );
+}
+
+/* ── 3D Canvas scene ─────────────────────────────────────────────────────── */
+function NinjaScene() {
+  return (
+    <Canvas
+      camera={{ position: [0, 0.8, 5.0], fov: 50 }}
+      style={{ width: "100%", height: "100%", background: "transparent" }}
+      gl={{ alpha: true, antialias: true }}
+    >
+      <ambientLight intensity={0.4} />
+      <directionalLight
+        position={[5, 8, 5]}
+        intensity={1.2}
+        castShadow={false}
+      />
+      {/* Accent orange point light to match theme */}
+      <pointLight position={[-3, 2, 2]} intensity={1.5} color="#ffa116" />
+      <pointLight position={[3, -1, 2]} intensity={0.6} color="#ff6d00" />
+
+      <Suspense fallback={null}>
+        <NinjaModel url="/ninja_animation.glb" />
+        <Environment preset="night" />
+      </Suspense>
+
+      {/* Manual rotation controls — autoRotate disabled */}
+      <OrbitControls
+        enableZoom={false}
+        enablePan={false}
+        autoRotate={false}
+        enableDamping={true}
+        dampingFactor={0.05}
+        minPolarAngle={Math.PI / 3}
+        maxPolarAngle={Math.PI / 1.6}
+      />
+    </Canvas>
+  );
+}
+
+/* ── Floating ambient particle ───────────────────────────────────────────── */
 function Particle({ style }) {
   return <div className="sc-particle" style={style} />;
 }
 
 const KANJI = ["忍", "道", "影", "闇", "剣", "謎", "力", "術"];
 
+/* ── Main page ───────────────────────────────────────────────────────────── */
 export default function ShadowCodePage() {
   const navigate = useNavigate();
   const [revealed, setRevealed] = useState(false);
@@ -102,9 +159,7 @@ export default function ShadowCodePage() {
     setParticles(generated);
   }, []);
 
-  const handleEnterDojo = () => {
-    navigate("/shadow-code/dojo");
-  };
+  const handleEnterDojo = () => navigate("/shadow-code/dojo");
 
   return (
     <div className="sc-landing" ref={containerRef}>
@@ -149,16 +204,18 @@ export default function ShadowCodePage() {
       {/* Radial glow behind ninja */}
       <div className="sc-ninja-glow" />
 
-      {/* Content */}
+      {/* Main content layout */}
       <div className={`sc-content ${revealed ? "sc-content-visible" : ""}`}>
 
-        {/* Ninja */}
+        {/* 3D Ninja — full left column */}
         <div className="sc-ninja-wrapper">
-          <AnimatedNinja />
+          <Suspense fallback={<FallbackNinja />}>
+            <NinjaScene />
+          </Suspense>
           <div className="sc-ninja-shadow" />
         </div>
 
-        {/* Text story */}
+        {/* Text story — right column */}
         <div className="sc-story">
           <div className="sc-eyebrow">
             <span className="sc-dot" />

@@ -1,0 +1,70 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+:root {
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color: #eff1f6;
+  background: #0a0a0a;
+  
+  --bg: #0a0a0a;
+  --bg-soft: #121212;
+  --panel: #1e1e1e;
+  --panel-strong: #252525;
+  --border: #333333;
+  --text: #eff1f6;
+  --muted: #999999;
+  --accent: #ffa116;
+  --accent-hover: #ffb84d;
+  --danger: #ef4743;
+  --success: #2cbb5d;
+  --shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+/* Professional Minimalist Modal Buttons */
+.modal-btn {
+  padding: 6px 16px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.modal-btn-cancel {
+  background: #3d3d3d;
+  color: #eff1f6;
+  border-color: #4d4d4d;
+}
+
+.modal-btn-cancel:hover {
+  background: #4d4d4d;
+}
+
+.modal-btn-submit {
+  background: #ffa116;
+  color: #000;
+  font-weight: 600;
+}
+
+.modal-btn-submit:hover {
+  background: #ffb84d;
+}
+
+.modal-btn-danger {
+  background: #e74c3c;
+  color: white;
+}
+
+.modal-btn-danger:hover {
+  background: #c0392b;
+}
+
+body {
+  margin: 0;
+  background-color: var(--bg);
+  color: var(--text);
+}

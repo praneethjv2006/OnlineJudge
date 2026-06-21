@@ -1,5 +1,6 @@
 const Problem = require("../models/Problem");
 const Submission = require("../models/Submission");
+const mongoose = require("mongoose");
 const { resolveUserFromAccessToken } = require("../services/authSession");
 const { SUPPORTED_LANGUAGES, runCodeAgainstTestCases } = require("../services/codeRunner");
 const Groq = require("groq-sdk");
@@ -22,7 +23,24 @@ const createProblem = async (req, res) => {
       return res.status(401).json({ message: "Please sign in to create a problem." });
     }
 
-    const { title, difficulty, statement, timeComplexity, spaceComplexity, testCases } = req.body;
+    const {
+      title,
+      difficulty,
+      statement,
+      timeComplexity,
+      spaceComplexity,
+      testCases,
+      tags,
+      timeLimit,
+      memoryLimit,
+      problemStory,
+      formalStatement,
+      inputFormat,
+      outputFormat,
+      constraints,
+      examples,
+      notes,
+    } = req.body;
 
     if (!title || !difficulty || !statement || !testCases || testCases.length === 0) {
       return res.status(400).json({
@@ -40,6 +58,29 @@ const createProblem = async (req, res) => {
         input: tc.input?.trim(),
         expectedOutput: tc.expectedOutput?.trim(),
       })),
+      tags: Array.isArray(tags)
+        ? tags.map((tag) => String(tag).trim()).filter(Boolean)
+        : String(tags || "")
+            .split(",")
+            .map((tag) => tag.trim())
+            .filter(Boolean),
+      timeLimit: Number(timeLimit) || 2000,
+      memoryLimit: Number(memoryLimit) || 256,
+      problemStory: problemStory?.trim(),
+      formalStatement: formalStatement?.trim(),
+      inputFormat: inputFormat?.trim(),
+      outputFormat: outputFormat?.trim(),
+      constraints: constraints?.trim(),
+      examples: Array.isArray(examples)
+        ? examples
+            .filter((example) => example?.input || example?.output || example?.explanation)
+            .map((example) => ({
+              input: example.input?.trim(),
+              output: example.output?.trim(),
+              explanation: example.explanation?.trim(),
+            }))
+        : [],
+      notes: notes?.trim(),
       createdBy: user._id,
     });
 
@@ -96,7 +137,7 @@ const runProblemCode = async (req, res) => {
       code,
       language,
       testCases: casesToRun,
-      timeLimitMs: 2000,
+      timeLimitMs: problem.timeLimit || 2000,
     });
 
     if (isSubmit) {
@@ -260,6 +301,38 @@ Rules:
   }
 };
 
+const deleteProblem = async (req, res) => {
+  try {
+    const user = await resolveUserFromAccessToken(req);
+    if (!user) {
+      return res.status(401).json({ message: "Please sign in to delete a problem." });
+    }
+    if (!mongoose.isValidObjectId(req.params.id)) {
+      return res.status(404).json({ message: "Problem not found." });
+    }
+
+    const problem = await Problem.findOne({
+      _id: req.params.id,
+      createdBy: user._id,
+    });
+    if (!problem) {
+      const problemExists = await Problem.exists({ _id: req.params.id });
+      return res.status(problemExists ? 403 : 404).json({
+        message: problemExists
+          ? "Only the problem author can delete this problem."
+          : "Problem not found.",
+      });
+    }
+
+    await Submission.deleteMany({ problem: problem._id });
+    await problem.deleteOne();
+
+    return res.json({ message: "Problem deleted successfully." });
+  } catch (error) {
+    return res.status(500).json({ message: "Unable to delete problem.", error: error.message });
+  }
+};
+
 module.exports = {
   listProblems,
   createProblem,
@@ -267,5 +340,5 @@ module.exports = {
   runProblemCode,
   getProblemSubmissions,
   analyzeCode,
+  deleteProblem,
 };
-

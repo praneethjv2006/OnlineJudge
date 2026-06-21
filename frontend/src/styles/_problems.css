@@ -553,6 +553,432 @@
   border-color: var(--accent);
 }
 
+/* ==========================================
+   Problem Delete Button
+   ========================================== */
+.problem-delete-btn {
+  background: rgba(239, 71, 67, 0.08);
+  border: none;
+  color: #ef4743;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  opacity: 0.5;
+}
+
+.problem-delete-btn:hover {
+  background: rgba(239, 71, 67, 0.2);
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+tr:hover .problem-delete-btn {
+  opacity: 0.8;
+}
+
+/* ================================================================
+   PREMIUM PROBLEM STATEMENT REDESIGN (LeetCode / Codeforces style)
+   ================================================================ */
+
+.problem-statement-container {
+  padding: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.problem-statement-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 28px 48px;
+  scroll-behavior: smooth;
+}
+
+.problem-statement-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.problem-statement-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.problem-statement-scroll::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 3px;
+}
+
+/* ─── Problem Header ─── */
+.problem-display-header {
+  margin-bottom: 28px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.problem-display-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 14px 0;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+}
+
+.problem-display-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.problem-display-difficulty {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 14px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: capitalize;
+  letter-spacing: 0.03em;
+}
+
+.problem-display-difficulty.easy {
+  background: rgba(44, 187, 93, 0.12);
+  color: #2cbb5d;
+  border: 1px solid rgba(44, 187, 93, 0.2);
+}
+
+.problem-display-difficulty.medium {
+  background: rgba(255, 161, 22, 0.12);
+  color: #ffa116;
+  border: 1px solid rgba(255, 161, 22, 0.2);
+}
+
+.problem-display-difficulty.hard {
+  background: rgba(239, 71, 67, 0.12);
+  color: #ef4743;
+  border: 1px solid rgba(239, 71, 67, 0.2);
+}
+
+.problem-display-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.78rem;
+  color: var(--muted);
+  padding: 4px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  white-space: nowrap;
+}
+
+.problem-display-stat svg {
+  opacity: 0.6;
+}
+
+/* ─── Tags ─── */
+.problem-tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.problem-tag {
+  display: inline-flex;
+  padding: 3px 12px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: rgba(255, 161, 22, 0.08);
+  color: var(--accent);
+  border: 1px solid rgba(255, 161, 22, 0.12);
+  letter-spacing: 0.01em;
+  transition: all 0.2s ease;
+  text-transform: capitalize;
+}
+
+.problem-tag:hover {
+  background: rgba(255, 161, 22, 0.15);
+  color: #ffb84d;
+  border-color: rgba(255, 161, 22, 0.25);
+}
+
+/* ─── Problem Sections (Card style with left accent border) ─── */
+.problem-section {
+  margin-bottom: 32px;
+}
+
+.problem-section:last-child {
+  margin-bottom: 0;
+}
+
+.problem-section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #e8e8e8;
+  margin: 0 0 14px 0;
+  padding: 0 0 10px 14px;
+  border-left: 3px solid var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  line-height: 1.3;
+}
+
+.problem-section-title svg {
+  color: var(--accent);
+  opacity: 0.8;
+  flex-shrink: 0;
+}
+
+.problem-section-content {
+  font-size: 0.95rem;
+  line-height: 1.75;
+  color: #d0d0d0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  padding: 0 0 0 4px;
+}
+
+.problem-section-content p {
+  margin: 0 0 12px 0;
+}
+
+.problem-section-content p:last-child {
+  margin-bottom: 0;
+}
+
+/* Constraint list styling - monospace, compact */
+.problem-section-content ul,
+.problem-section-content ol {
+  padding-left: 20px;
+  margin: 8px 0;
+}
+
+.problem-section-content li {
+  margin-bottom: 4px;
+  line-height: 1.6;
+}
+
+/* Inline code in problem text */
+.problem-section-content code {
+  background: rgba(255, 255, 255, 0.06);
+  color: #e0e0e0;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: "JetBrains Mono", "Fira Code", "Consolas", monospace;
+  font-size: 0.85em;
+}
+
+.problem-section-content strong {
+  color: #f0f0f0;
+}
+
+/* ─── Problem Story (callout/quote style) ─── */
+.problem-section.story-section .problem-section-content {
+  font-style: italic;
+  color: #c0c0c0;
+  padding: 16px 20px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 10px;
+  border-left: 3px solid rgba(255, 161, 22, 0.2);
+  line-height: 1.7;
+}
+
+/* ─── Constraints Block (like Codeforces boxed constraints) ─── */
+.problem-section.constraints-section .problem-section-content {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  padding: 14px 18px;
+  font-family: "JetBrains Mono", "Fira Code", "Consolas", monospace;
+  font-size: 0.88rem;
+  line-height: 1.8;
+  color: #ccc;
+}
+
+/* ─── Example Blocks (LeetCode style) ─── */
+.problem-examples-container {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.problem-example-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.problem-example-card:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.example-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 18px;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #ccc;
+}
+
+.example-card-header span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.example-card-body {
+  padding: 14px 18px;
+}
+
+.example-io-row {
+  margin-bottom: 12px;
+}
+
+.example-io-row:last-child {
+  margin-bottom: 0;
+}
+
+.example-io-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #888;
+  margin-bottom: 4px;
+}
+
+.example-io-value {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-family: "JetBrains Mono", "Fira Code", "Consolas", monospace;
+  font-size: 0.85rem;
+  color: #d4d4d4;
+  white-space: pre-wrap;
+  word-break: break-all;
+  line-height: 1.5;
+  margin: 0;
+  overflow-x: auto;
+}
+
+/* Example explanation (like LeetCode's note under examples) */
+.example-explanation {
+  margin-top: 12px;
+  padding: 12px 16px;
+  background: rgba(255, 161, 22, 0.04);
+  border-left: 3px solid rgba(255, 161, 22, 0.3);
+  border-radius: 0 8px 8px 0;
+  font-size: 0.88rem;
+  color: #bbb;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.example-explanation strong {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* ─── Notes / Hints Box ─── */
+.problem-notes-box {
+  background: linear-gradient(135deg, rgba(255, 161, 22, 0.04) 0%, rgba(255, 161, 22, 0.01) 100%);
+  border: 1px solid rgba(255, 161, 22, 0.12);
+  border-radius: 10px;
+  padding: 16px 20px;
+  font-size: 0.9rem;
+  line-height: 1.7;
+  color: #c0c0c0;
+  white-space: pre-wrap;
+  display: flex;
+  gap: 10px;
+}
+
+.problem-notes-box::before {
+  content: "💡";
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+/* ─── Tab extras ─── */
+.problem-stat-text {
+  font-size: 0.78rem;
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* ─── Responsive ─── */
+@media (max-width: 768px) {
+  .problem-statement-scroll {
+    padding: 16px;
+  }
+
+  .problem-display-title {
+    font-size: 1.25rem;
+  }
+
+  .problem-display-meta {
+    gap: 8px;
+  }
+
+  .problem-section-title {
+    font-size: 0.85rem;
+    padding-left: 10px;
+  }
+
+  .problem-section-content {
+    font-size: 0.9rem;
+  }
+
+  .problem-example-card {
+    border-radius: 10px;
+  }
+
+  .example-card-body {
+    padding: 12px;
+  }
+
+  .example-io-value {
+    font-size: 0.8rem;
+    padding: 8px 10px;
+  }
+}
+
+/* ==========================================
+   Console & Result improvements
+   ========================================== */
+.stdout-pass {
+  background: rgba(44, 187, 93, 0.05) !important;
+  border: 1px solid rgba(44, 187, 93, 0.15) !important;
+}
+
+.stdout-fail {
+  background: rgba(239, 71, 67, 0.05) !important;
+  border: 1px solid rgba(239, 71, 67, 0.15) !important;
+}
+
 /* New Console UI Additions */
 .console-mode-tabs {
   display: flex;
@@ -705,4 +1131,162 @@
 
 .featured-challenge-banner:hover .featured-banner-action {
   color: var(--accent-hover);
+}
+
+/* Premium statement surface */
+.problem-delete-btn {
+  border: 1px solid rgba(239, 71, 67, 0.16);
+  opacity: 0.72;
+}
+
+.problem-statement-scroll {
+  padding: 30px clamp(20px, 3vw, 42px) 56px;
+  background:
+    radial-gradient(circle at 90% 0%, rgba(255, 161, 22, 0.07), transparent 28%),
+    #151515;
+}
+
+.problem-display-header {
+  position: relative;
+  margin-bottom: 20px;
+  padding: 26px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.015));
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.2);
+}
+
+.problem-display-header::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent), transparent 72%);
+}
+
+.problem-display-kicker {
+  margin-bottom: 8px;
+  color: var(--accent);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.problem-display-title {
+  font-size: clamp(1.45rem, 3vw, 2rem);
+  font-weight: 760;
+}
+
+.problem-display-meta {
+  gap: 9px;
+  margin-bottom: 16px;
+}
+
+.problem-display-stat {
+  gap: 7px;
+  padding: 7px 11px;
+  border-radius: 9px;
+  background: rgba(0, 0, 0, 0.18);
+  color: #d9d9d9;
+}
+
+.problem-display-stat svg {
+  color: var(--accent);
+  opacity: 0.85;
+}
+
+.problem-display-stat > span {
+  display: grid;
+  gap: 1px;
+  font-size: 0.76rem;
+  font-weight: 650;
+}
+
+.problem-display-stat small {
+  color: #777;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.problem-section {
+  margin-bottom: 16px;
+  padding: 22px 24px;
+  border: 1px solid rgba(255, 255, 255, 0.065);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.022);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+}
+
+.problem-section-title {
+  margin: 0 0 16px;
+  padding: 0 0 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.065);
+  border-left: 0;
+}
+
+.problem-section.story-section .problem-section-content {
+  font-style: normal;
+  background: linear-gradient(90deg, rgba(255, 161, 22, 0.07), rgba(255, 161, 22, 0.015));
+}
+
+.problem-section.constraints-section .problem-section-content {
+  border: 1px dashed rgba(255, 161, 22, 0.2);
+}
+
+.problem-notes-box::before {
+  content: "TIP";
+  margin-top: 4px;
+  color: var(--accent);
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.delete-confirmation-copy {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.delete-confirmation-copy p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.delete-confirmation-copy strong {
+  color: #fff;
+}
+
+.delete-confirmation-icon {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  place-items: center;
+  border: 1px solid rgba(239, 71, 67, 0.2);
+  border-radius: 12px;
+  background: rgba(239, 71, 67, 0.1);
+  color: var(--danger);
+}
+
+@media (max-width: 768px) {
+  .problem-display-header,
+  .problem-section {
+    padding: 18px;
+    border-radius: 13px;
+  }
+
+  .problems-list-container {
+    overflow-x: auto;
+  }
+
+  .problems-list-table {
+    min-width: 720px;
+  }
 }

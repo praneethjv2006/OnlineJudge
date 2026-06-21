@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { 
   Plus, 
   Trash2, 
@@ -11,23 +11,38 @@ import {
   Activity,
   CheckCircle2,
   Filter,
-  Search
+  Search,
+  AlertTriangle
 } from "lucide-react";
-import { getProblems, createProblem } from "../services/problemService";
+import { getProblems, createProblem, deleteProblem } from "../services/problemService";
+import { useAppContext } from "../App";
 import { toast } from "../components/common/Toast";
+import Modal from "../components/common/Modal";
 
 const ProblemsPage = () => {
+  const { user } = useAppContext();
   const [problems, setProblems] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     difficulty: "easy",
     statement: "",
+    tags: "",
+    timeLimit: 2000,
+    memoryLimit: 256,
+    problemStory: "",
+    formalStatement: "",
+    inputFormat: "",
+    outputFormat: "",
+    constraints: "",
+    notes: "",
     timeComplexity: "",
     spaceComplexity: "",
-    testCases: [{ input: "", expectedOutput: "" }],
+    testCases: [{ input: "", expectedOutput: "", explanation: "" }],
   });
 
   useEffect(() => {
@@ -59,7 +74,7 @@ const ProblemsPage = () => {
   const addTestCase = () => {
     setFormData((prev) => ({
       ...prev,
-      testCases: [...prev.testCases, { input: "", expectedOutput: "" }],
+      testCases: [...prev.testCases, { input: "", expectedOutput: "", explanation: "" }],
     }));
   };
 
@@ -73,15 +88,31 @@ const ProblemsPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await createProblem(formData);
+      await createProblem({
+        ...formData,
+        examples: formData.testCases.map((testCase) => ({
+          input: testCase.input,
+          output: testCase.expectedOutput,
+          explanation: testCase.explanation,
+        })),
+      });
       setIsModalOpen(false);
       setFormData({
         title: "",
         difficulty: "easy",
         statement: "",
+        tags: "",
+        timeLimit: 2000,
+        memoryLimit: 256,
+        problemStory: "",
+        formalStatement: "",
+        inputFormat: "",
+        outputFormat: "",
+        constraints: "",
+        notes: "",
         timeComplexity: "",
         spaceComplexity: "",
-        testCases: [{ input: "", expectedOutput: "" }],
+        testCases: [{ input: "", expectedOutput: "", explanation: "" }],
       });
       fetchProblems();
       toast.success("Problem created successfully!");
@@ -89,6 +120,35 @@ const ProblemsPage = () => {
       console.error("Error creating problem:", error);
       toast.error("Failed to create problem. " + (error.response?.data?.message || ""));
     }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteConfirm) return;
+    setIsDeleting(true);
+    try {
+      await deleteProblem(deleteConfirm._id);
+      toast.success("Problem deleted successfully.");
+      setDeleteConfirm(null);
+      setProblems((current) =>
+        current.filter((problem) => problem._id !== deleteConfirm._id)
+      );
+    } catch (error) {
+      const serverMessage = error.response?.data?.message;
+      const message =
+        error.response?.status === 404 && !serverMessage
+          ? "The delete API is not available on the deployed backend yet. Redeploy the Railway backend and try again."
+          : serverMessage || "Failed to delete problem.";
+
+      toast.error(message);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const isAuthor = (problem) => {
+    if (!user || !problem.createdBy) return false;
+    const authorId = problem.createdBy._id || problem.createdBy;
+    return String(user.id || user._id) === String(authorId);
   };
 
   const filteredProblems = problems.filter(p => 
@@ -148,6 +208,7 @@ const ProblemsPage = () => {
                   <th>Difficulty</th>
                   <th>Complexity</th>
                   <th>Created By</th>
+                  <th style={{ width: "60px" }}></th>
                 </tr>
               </thead>
               <tbody>
@@ -179,6 +240,17 @@ const ProblemsPage = () => {
                          </div>
                          <span style={{ fontSize: "0.85rem", color: "var(--muted)" }}>{problem.createdBy?.name || "Unknown"}</span>
                       </div>
+                    </td>
+                    <td>
+                      {isAuthor(problem) && (
+                        <button
+                          onClick={() => setDeleteConfirm(problem)}
+                          className="problem-delete-btn"
+                          title="Delete problem"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -221,6 +293,38 @@ const ProblemsPage = () => {
       >
         <Plus size={28} strokeWidth={2.5} />
       </button>
+
+      <Modal
+        isOpen={Boolean(deleteConfirm)}
+        onClose={() => !isDeleting && setDeleteConfirm(null)}
+        title="Delete problem?"
+        footer={
+          <>
+            <button
+              className="modal-btn modal-btn-cancel"
+              onClick={() => setDeleteConfirm(null)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </button>
+            <button
+              className="modal-btn modal-btn-danger"
+              onClick={handleDeleteConfirm}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Delete problem"}
+            </button>
+          </>
+        }
+      >
+        <div className="delete-confirmation-copy">
+          <span className="delete-confirmation-icon"><AlertTriangle size={24} /></span>
+          <p>
+            Are you sure you want to delete <strong>{deleteConfirm?.title}</strong>? This action
+            cannot be undone, and its submissions will also be removed.
+          </p>
+        </div>
+      </Modal>
 
       {/* Professional Modal */}
       {isModalOpen && (
@@ -337,19 +441,128 @@ const ProblemsPage = () => {
                   </div>
 
                   <label style={{ marginTop: "20px", display: "block" }}>
-                    <span style={{ fontSize: "0.85rem", color: "#999", marginBottom: "8px", display: "block" }}>Problem Statement</span>
+                    <span style={{ fontSize: "0.85rem", color: "#999", marginBottom: "8px", display: "block" }}>Short Statement / Summary</span>
                     <textarea
                       name="statement"
                       value={formData.statement}
                       onChange={handleInputChange}
                       required
-                      placeholder="Explain the problem clearly, including constraints and examples..."
-                      style={{ minHeight: "180px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)", lineHeight: "1.6" }}
+                      placeholder="A concise version used as the fallback problem statement..."
+                      style={{ minHeight: "110px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.1)", lineHeight: "1.6" }}
                     />
                   </label>
+
+                  <div className="form-grid two-up" style={{ marginTop: "20px", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))" }}>
+                    <label style={{ minWidth: 0 }}>
+                      <span style={{ fontSize: "0.85rem", color: "#999", marginBottom: "8px", display: "block" }}>Tags</span>
+                      <input
+                        type="text"
+                        name="tags"
+                        value={formData.tags}
+                        onChange={handleInputChange}
+                        placeholder="arrays, greedy, sorting"
+                      />
+                    </label>
+                    <label style={{ minWidth: 0 }}>
+                      <span style={{ fontSize: "0.85rem", color: "#999", marginBottom: "8px", display: "block" }}>Time Limit (ms)</span>
+                      <input
+                        type="number"
+                        name="timeLimit"
+                        min="100"
+                        value={formData.timeLimit}
+                        onChange={handleInputChange}
+                      />
+                    </label>
+                    <label style={{ minWidth: 0 }}>
+                      <span style={{ fontSize: "0.85rem", color: "#999", marginBottom: "8px", display: "block" }}>Memory (MB)</span>
+                      <input
+                        type="number"
+                        name="memoryLimit"
+                        min="16"
+                        value={formData.memoryLimit}
+                        onChange={handleInputChange}
+                      />
+                    </label>
+                  </div>
                 </div>
 
-                {/* Section 2: Complexity */}
+                {/* Section 2: Structured statement */}
+                <div style={{ marginBottom: "40px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "20px", color: "var(--accent)" }}>
+                    <Code2 size={16} />
+                    <span style={{ fontSize: "0.8rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "1px" }}>Structured Statement</span>
+                  </div>
+
+                  <label style={{ display: "block", marginBottom: "18px" }}>
+                    <span style={{ fontSize: "0.85rem", color: "#999", marginBottom: "8px", display: "block" }}>Problem Story</span>
+                    <textarea
+                      name="problemStory"
+                      value={formData.problemStory}
+                      onChange={handleInputChange}
+                      placeholder="Optional narrative or real-world setup..."
+                      style={{ minHeight: "90px" }}
+                    />
+                  </label>
+
+                  <label style={{ display: "block", marginBottom: "18px" }}>
+                    <span style={{ fontSize: "0.85rem", color: "#999", marginBottom: "8px", display: "block" }}>Formal Problem Statement</span>
+                    <textarea
+                      name="formalStatement"
+                      value={formData.formalStatement}
+                      onChange={handleInputChange}
+                      placeholder="Define exactly what the contestant must compute..."
+                      style={{ minHeight: "130px" }}
+                    />
+                  </label>
+
+                  <div className="form-grid two-up" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", marginBottom: "18px" }}>
+                    <label style={{ minWidth: 0 }}>
+                      <span style={{ fontSize: "0.85rem", color: "#999", marginBottom: "8px", display: "block" }}>Input Format</span>
+                      <textarea
+                        name="inputFormat"
+                        value={formData.inputFormat}
+                        onChange={handleInputChange}
+                        placeholder="Describe every input line and value..."
+                        style={{ minHeight: "110px" }}
+                      />
+                    </label>
+                    <label style={{ minWidth: 0 }}>
+                      <span style={{ fontSize: "0.85rem", color: "#999", marginBottom: "8px", display: "block" }}>Output Format</span>
+                      <textarea
+                        name="outputFormat"
+                        value={formData.outputFormat}
+                        onChange={handleInputChange}
+                        placeholder="Describe exactly what should be printed..."
+                        style={{ minHeight: "110px" }}
+                      />
+                    </label>
+                  </div>
+
+                  <div className="form-grid two-up" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))" }}>
+                    <label style={{ minWidth: 0 }}>
+                      <span style={{ fontSize: "0.85rem", color: "#999", marginBottom: "8px", display: "block" }}>Constraints</span>
+                      <textarea
+                        name="constraints"
+                        value={formData.constraints}
+                        onChange={handleInputChange}
+                        placeholder={"1 ≤ N ≤ 2 × 10⁵\n0 ≤ Aᵢ ≤ 10⁹"}
+                        style={{ minHeight: "110px", fontFamily: "monospace" }}
+                      />
+                    </label>
+                    <label style={{ minWidth: 0 }}>
+                      <span style={{ fontSize: "0.85rem", color: "#999", marginBottom: "8px", display: "block" }}>Notes or Hints</span>
+                      <textarea
+                        name="notes"
+                        value={formData.notes}
+                        onChange={handleInputChange}
+                        placeholder="Optional clarifications or non-spoiler hints..."
+                        style={{ minHeight: "110px" }}
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                {/* Section 3: Complexity */}
                 <div style={{ marginBottom: "40px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "20px", color: "var(--accent)" }}>
                     <Activity size={16} />
@@ -381,7 +594,7 @@ const ProblemsPage = () => {
                   </div>
                 </div>
 
-                {/* Section 3: Test Cases */}
+                {/* Section 4: Test Cases */}
                 <div>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--accent)" }}>
@@ -446,6 +659,15 @@ const ProblemsPage = () => {
                             />
                           </label>
                         </div>
+                        <label style={{ minWidth: 0, display: "block", marginTop: "14px" }}>
+                          <span style={{ fontSize: "0.75rem", color: "#666", marginBottom: "6px", display: "block" }}>Example Explanation (optional)</span>
+                          <textarea
+                            value={tc.explanation}
+                            onChange={(e) => handleTestCaseChange(index, "explanation", e.target.value)}
+                            placeholder="Explain why this sample produces the expected output..."
+                            style={{ minHeight: "70px", width: "100%" }}
+                          />
+                        </label>
                       </div>
                     ))}
                   </div>

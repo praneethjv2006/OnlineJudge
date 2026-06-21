@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { X } from "lucide-react";
+import PropTypes from "prop-types";
 
 const Modal = ({ isOpen, onClose, title, children, footer }) => {
   const [isRendered, setIsRendered] = useState(false);
@@ -53,6 +54,14 @@ const Modal = ({ isOpen, onClose, title, children, footer }) => {
       </div>
     </div>
   );
+};
+
+Modal.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  title: PropTypes.string.isRequired,
+  children: PropTypes.node,
+  footer: PropTypes.node,
 };
 
 export default Modal;

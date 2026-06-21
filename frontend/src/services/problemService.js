@@ -30,3 +30,7 @@ export const getProblemSubmissions = async (id) => {
   return response.data;
 };
 
+export const deleteProblem = async (id) => {
+  const response = await api.delete(`/problems/${id}`);
+  return response.data;
+};

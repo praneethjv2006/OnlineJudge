@@ -53,6 +53,49 @@ const problemSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    tags: {
+      type: [String],
+      default: [],
+    },
+    timeLimit: {
+      type: Number,
+      default: 2000,
+    },
+    memoryLimit: {
+      type: Number,
+      default: 256,
+    },
+    problemStory: {
+      type: String,
+      default: "",
+    },
+    formalStatement: {
+      type: String,
+      default: "",
+    },
+    inputFormat: {
+      type: String,
+      default: "",
+    },
+    outputFormat: {
+      type: String,
+      default: "",
+    },
+    constraints: {
+      type: String,
+      default: "",
+    },
+    examples: [
+      {
+        input: String,
+        output: String,
+        explanation: String,
+      },
+    ],
+    notes: {
+      type: String,
+      default: "",
+    },
   },
   {
     timestamps: true,

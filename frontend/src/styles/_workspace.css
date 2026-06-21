@@ -510,6 +510,11 @@ body.is-resizing .resizer-v {
   padding: 24px 30px;
 }
 
+.panel-content.problem-description-panel {
+  overflow: hidden;
+  padding: 0;
+}
+
 .description-view {
   max-width: 900px;
   line-height: 1.7;
@@ -913,4 +918,68 @@ body.fullscreen-contest-active .app-main {
 
 body.fullscreen-contest-active .topbar {
   display: none;
+}
+
+@media (max-width: 900px) {
+  .contest-workspace-root {
+    min-height: 100dvh;
+    height: auto;
+  }
+
+  .workspace-header {
+    min-height: 56px;
+    height: auto;
+    padding: 8px 12px;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .current-problem-title,
+  .user-profile-mini {
+    display: none;
+  }
+
+  .workspace-main {
+    overflow: visible;
+  }
+
+  .leetcode-layout {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: 68dvh 70dvh;
+    height: auto;
+  }
+
+  .resizer-v {
+    display: none;
+  }
+
+  .leetcode-left-panel,
+  .leetcode-right-panel {
+    min-height: 0;
+    border: 0;
+  }
+
+  .leetcode-right-panel {
+    border-top: 6px solid #282828;
+  }
+}
+
+@media (max-width: 560px) {
+  .workspace-header .header-left,
+  .workspace-header .header-right,
+  .workspace-actions {
+    width: 100%;
+  }
+
+  .workspace-header .header-right,
+  .workspace-actions {
+    justify-content: space-between;
+  }
+
+  .btn-run,
+  .btn-analyze,
+  .btn-submit {
+    flex: 1;
+    justify-content: center;
+  }
 }

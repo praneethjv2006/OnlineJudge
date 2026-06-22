@@ -174,18 +174,43 @@ const runProblemCode = async (req, res) => {
 
     const { code, language = "cpp", isSubmit = false, customTestCases } = req.body;
 
+    if (!code || !code.trim()) {
+      return res.status(400).json({ message: "Code cannot be empty." });
+    }
+
     if (!SUPPORTED_LANGUAGES.includes(language)) {
       return res.status(400).json({
         message: `Unsupported language. Choose one of: ${SUPPORTED_LANGUAGES.join(", ")}.`,
       });
     }
 
+    // Validate that test cases exist
     let casesToRun = problem.testCases;
+    if (!Array.isArray(casesToRun) || casesToRun.length === 0) {
+      return res.status(400).json({
+        message: "This problem has no test cases defined. Please contact the problem creator.",
+      });
+    }
+
     if (!isSubmit && Array.isArray(customTestCases) && customTestCases.length > 0) {
-      casesToRun = customTestCases.map((tc) => ({
-        input: tc.input ?? "",
-        expectedOutput: tc.expectedOutput ?? "",
-      }));
+      // Validate custom test cases format
+      const validatedCustom = customTestCases
+        .map((tc) => ({
+          input: String(tc?.input ?? "").trim(),
+          expectedOutput: String(tc?.expectedOutput ?? "").trim(),
+        }))
+        .filter((tc) => tc.input !== "" && tc.expectedOutput !== "");
+      
+      if (validatedCustom.length > 0) {
+        casesToRun = validatedCustom;
+      }
+    }
+
+    // Final validation that we have test cases
+    if (!Array.isArray(casesToRun) || casesToRun.length === 0) {
+      return res.status(400).json({
+        message: "No valid test cases available to run.",
+      });
     }
 
     const execution = await runCodeAgainstTestCases({
@@ -216,6 +241,7 @@ const runProblemCode = async (req, res) => {
       terminalOutput: execution.terminalOutput,
     });
   } catch (error) {
+    console.error("Error in runProblemCode:", error);
     return res.status(500).json({ message: error.message || "Unable to run code.", error: error.message });
   }
 };

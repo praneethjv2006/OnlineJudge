@@ -216,7 +216,9 @@ const runCodeAgainstTestCases = async ({ code, language, testCases, timeLimitMs 
     throw new Error("Unsupported language.");
   }
 
-  const workDir = await fs.mkdtemp(path.join(__dirname, "temp", "oj-run-"));
+  const tempDir = path.join(__dirname, "temp");
+  await fs.mkdir(tempDir, { recursive: true });
+  const workDir = await fs.mkdtemp(path.join(tempDir, "oj-run-"));
   const sourcePath = path.join(workDir, config.sourceFile);
 
   try {

@@ -8,7 +8,12 @@ import {
   Activity, 
   Code, 
   X, 
-  Info
+  Info,
+  Zap,
+  Target,
+  Cpu,
+  Layers,
+  Award
 } from "lucide-react";
 
 const getMonthName = (monthIndex) => {
@@ -202,6 +207,87 @@ function DashboardPage() {
           <div className="stats-circle-container">
             <div className="stats-circle-number">{totalSolved}</div>
           </div>
+        </div>
+      </div>
+
+      {/* COGNITIVE PROFILE ENGINE CARD */}
+      <div className="cognitive-profile-card panel">
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "18px" }}>
+          <Award size={18} style={{ color: "#00b4d8" }} />
+          <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: "700", color: "#fff" }}>Cognitive Profile Engine</h3>
+        </div>
+        <p style={{ color: "var(--muted)", fontSize: "0.9rem", marginTop: "-10px", marginBottom: "20px" }}>
+          Real-time cognitive profile ratings computed dynamically based on the complexity, difficulty, and variety of challenges you solve.
+        </p>
+
+        <div className="cognitive-grid">
+          {(stats?.cognitiveProfile || []).map((skill) => {
+            let SkillIcon = Layers;
+            let themeColor = "#9b5de5"; // purple
+            let skillDesc = "Identifies structural patterns, sub-segments, and sequence formulas.";
+
+            if (skill.name === "Optimization Ability") {
+              SkillIcon = Zap;
+              themeColor = "#00b4d8"; // blue
+              skillDesc = "Devises greedily optimal, divide-and-conquer, or DP strategies.";
+            } else if (skill.name === "Mathematical Reasoning") {
+              SkillIcon = Cpu;
+              themeColor = "#06d6a0"; // green
+              skillDesc = "Applies number theory, modular arithmetic, and combinatorial logic.";
+            } else if (skill.name === "Logic Flow & Debugging") {
+              SkillIcon = Activity;
+              themeColor = "#ffd166"; // yellow
+              skillDesc = "Traces complex conditional paths, state logic, and locates edge case anomalies.";
+            } else if (skill.name === "Memory & Complexity") {
+              SkillIcon = Target;
+              themeColor = "#ef476f"; // red/pink
+              skillDesc = "Manages time-limit parameters, space-complexity bounds, and handles precision constraints.";
+            }
+
+            let badgeClass = "badge-easy";
+            if (skill.tier === "Medium") badgeClass = "badge-medium";
+            else if (skill.tier === "Hard") badgeClass = "badge-hard";
+            else if (skill.tier === "Extreme") badgeClass = "badge-extreme";
+
+            return (
+              <div key={skill.name} className="cognitive-skill-row">
+                <div className="skill-info-left">
+                  <div className="skill-icon-wrapper" style={{ backgroundColor: `${themeColor}20`, color: themeColor }}>
+                    <SkillIcon size={18} />
+                  </div>
+                  <div>
+                    <h4 style={{ margin: 0, fontSize: "0.95rem", color: "#fff" }}>{skill.name}</h4>
+                    <p style={{ margin: "2px 0 0 0", fontSize: "0.78rem", color: "var(--muted)", lineHeight: "1.3" }}>
+                      {skillDesc}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="skill-stats-right">
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                    <span style={{ fontSize: "0.8rem", color: "var(--muted)" }}>
+                      Solved: <strong>{skill.solved}</strong>
+                    </span>
+                    <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                      <span className={`cognitive-badge ${badgeClass}`}>{skill.tier}</span>
+                      <strong style={{ fontSize: "0.95rem", color: themeColor }}>{skill.rating}</strong>
+                      <span style={{ fontSize: "0.75rem", color: "var(--muted)" }}>/100</span>
+                    </div>
+                  </div>
+                  <div className="skill-progress-bar-bg">
+                    <div
+                      className="skill-progress-bar-fill"
+                      style={{
+                        width: `${skill.rating}%`,
+                        background: `linear-gradient(90deg, ${themeColor}aa, ${themeColor})`,
+                        boxShadow: `0 0 8px ${themeColor}60`
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 

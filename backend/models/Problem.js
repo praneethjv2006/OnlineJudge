@@ -57,6 +57,19 @@ const problemSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
+    category: {
+      type: String,
+      default: "Coding",
+      trim: true,
+    },
+    cognitiveCategories: {
+      type: [String],
+      default: [],
+    },
+    topics: {
+      type: [String],
+      default: [],
+    },
     timeLimit: {
       type: Number,
       default: 2000,

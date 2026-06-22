@@ -31,6 +31,18 @@ const normalizeProblemInput = (body = {}) => {
     ? body.tags
     : String(body.tags || "").split(",");
 
+  const topics = Array.isArray(body.topics)
+    ? body.topics
+    : typeof body.topics === "string"
+      ? body.topics.split(",")
+      : [];
+
+  const cognitiveCategories = Array.isArray(body.cognitiveCategories)
+    ? body.cognitiveCategories
+    : typeof body.cognitiveCategories === "string"
+      ? body.cognitiveCategories.split(",")
+      : [];
+
   return {
     title: cleanText(body.title),
     difficulty: cleanText(body.difficulty).toLowerCase(),
@@ -46,6 +58,9 @@ const normalizeProblemInput = (body = {}) => {
     timeLimit: Number(body.timeLimit) || 2000,
     memoryLimit: Number(body.memoryLimit) || 256,
     tags: tags.map((tag) => cleanText(String(tag))).filter(Boolean),
+    category: cleanText(body.category) || "Coding",
+    cognitiveCategories: cognitiveCategories.map((c) => cleanText(String(c))).filter(Boolean),
+    topics: topics.map((t) => cleanText(String(t))).filter(Boolean),
     examples,
     testCases,
   };

@@ -21,6 +21,18 @@
   --danger: #ef4743;
   --success: #2cbb5d;
   --shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+
+  /* ── Alias tokens for new components ── */
+  --color-bg: #0a0a0a;
+  --color-surface-1: #1e1e1e;
+  --color-surface-2: #252525;
+  --color-border: #333333;
+  --color-border-strong: #4d4d4d;
+  --color-text-primary: #eff1f6;
+  --color-text-secondary: #c8ccd8;
+  --color-text-muted: #999999;
+  --color-accent: #6366f1;
+  --color-accent-hover: #4f46e5;
 }
 
 /* Professional Minimalist Modal Buttons */

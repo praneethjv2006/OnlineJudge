@@ -50,17 +50,33 @@ const generateContestCode = async () => {
 };
 
 const normalizeQuestions = (questions) =>
-  questions.map((question) => ({
-    title: question.title?.trim(),
-    prompt: question.prompt?.trim(),
-    timeLimitMs: Number(question.timeLimitMs),
-    testCases: Array.isArray(question.testCases)
-      ? question.testCases.map((testCase) => ({
-          input: testCase.input?.trim(),
-          expectedOutput: testCase.expectedOutput?.trim(),
-        }))
-      : [],
-  }));
+  questions.map((question) => {
+    const topics = Array.isArray(question.topics)
+      ? question.topics
+      : typeof question.topics === "string"
+        ? question.topics.split(",")
+        : [];
+    const cognitiveCategories = Array.isArray(question.cognitiveCategories)
+      ? question.cognitiveCategories
+      : typeof question.cognitiveCategories === "string"
+        ? question.cognitiveCategories.split(",")
+        : [];
+
+    return {
+      title: question.title?.trim(),
+      prompt: question.prompt?.trim(),
+      timeLimitMs: Number(question.timeLimitMs),
+      category: question.category?.trim() || "Coding",
+      cognitiveCategories: cognitiveCategories.map((c) => c?.trim()).filter(Boolean),
+      topics: topics.map((t) => t?.trim()).filter(Boolean),
+      testCases: Array.isArray(question.testCases)
+        ? question.testCases.map((testCase) => ({
+            input: testCase.input?.trim(),
+            expectedOutput: testCase.expectedOutput?.trim(),
+          }))
+        : [],
+    };
+  });
 
 const listContests = async (req, res) => {
   try {

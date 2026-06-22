@@ -39,6 +39,11 @@ export const loadDashboardStats = async () => {
   return response.data;
 };
 
+export const loadFriendProfile = async (userId) => {
+  const response = await api.get(`/auth/users/${userId}/stats`);
+  return response.data;
+};
+
 export const signOut = async () => {
   const response = await api.post("/auth/logout");
   clearSession();

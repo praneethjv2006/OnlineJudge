@@ -7,6 +7,8 @@ const connectDB = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
 const contestRoutes = require("./routes/contestRoutes");
 const problemRoutes = require("./routes/problemRoutes");
+const friendRoutes = require("./routes/friendRoutes");
+const chatRoutes = require("./routes/chatRoutes");
 
 dotenv.config();
 //console.log("MONGO_URI:", process.env.MONGO_URI);
@@ -53,6 +55,8 @@ app.get("/api/health", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/contests", contestRoutes);
 app.use("/api/problems", problemRoutes);
+app.use("/api/friends", friendRoutes);
+app.use("/api/chat", chatRoutes);
 
 const PORT = process.env.PORT || 5000;
 

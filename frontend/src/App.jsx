@@ -22,6 +22,8 @@ import HomePage from "./pages/HomePage";
 import DashboardPage from "./pages/DashboardPage";
 import ShadowCodePage from "./pages/ShadowCodePage";
 import ShadowDojoPage from "./pages/ShadowDojoPage";
+import FriendsPage from "./pages/FriendsPage";
+import MessagesPage from "./pages/MessagesPage";
 import { loadSession, signOut } from "./services/authService";
 import ToastContainer from "./components/common/Toast";
 
@@ -160,6 +162,8 @@ function AppRoutes() {
           <Route path="/contests/create" element={<CreateContestPage />} />
           <Route path="/contests/:contestId" element={<ContestRoomPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/friends" element={<FriendsPage />} />
+          <Route path="/messages" element={<MessagesPage />} />
         </Route>
       </Route>
 

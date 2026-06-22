@@ -26,6 +26,9 @@ const createEmptyForm = () => ({
   title: "",
   difficulty: "easy",
   tags: "",
+  category: "Coding",
+  cognitiveCategories: [],
+  topics: "",
   timeLimit: 2000,
   memoryLimit: 256,
   timeComplexity: "",
@@ -53,6 +56,9 @@ const toEditorForm = (problem) => {
     title: problem.title || "",
     difficulty: problem.difficulty || "easy",
     tags: Array.isArray(problem.tags) ? problem.tags.join(", ") : "",
+    category: problem.category || "Coding",
+    cognitiveCategories: Array.isArray(problem.cognitiveCategories) ? problem.cognitiveCategories : [],
+    topics: Array.isArray(problem.topics) ? problem.topics.join(", ") : "",
     timeLimit: problem.timeLimit || 2000,
     memoryLimit: problem.memoryLimit || 256,
     timeComplexity: problem.timeComplexity || "",
@@ -227,6 +233,12 @@ function ProblemEditorModal({ problem, onClose, onSaved }) {
       statement: form.formalStatement,
       timeLimit: Number(form.timeLimit),
       memoryLimit: Number(form.memoryLimit),
+      tags: form.tags
+        ? form.tags.split(",").map((t) => t.trim()).filter(Boolean)
+        : [],
+      topics: form.topics
+        ? form.topics.split(",").map((t) => t.trim()).filter(Boolean)
+        : [],
     };
 
     setIsSaving(true);
@@ -320,6 +332,65 @@ function ProblemEditorModal({ problem, onClose, onSaved }) {
                   placeholder="graphs, shortest path, dijkstra"
                 />
               </Field>
+
+              <div className="problem-editor-grid two">
+                <Field label="General Category" required>
+                  <select
+                    value={form.category}
+                    onChange={(event) => setField("category", event.target.value)}
+                  >
+                    <option value="Coding">Coding</option>
+                    <option value="Debugging">Debugging</option>
+                    <option value="Concept">Concept</option>
+                    <option value="Speedrun">Speedrun</option>
+                  </select>
+                </Field>
+                <Field label="Topics" hint="Comma-separated topics (e.g. Arrays, Strings, DP)">
+                  <input
+                    value={form.topics}
+                    onChange={(event) => setField("topics", event.target.value)}
+                    placeholder="Arrays, Dynamic Programming, Graphs"
+                  />
+                </Field>
+              </div>
+
+              <div className="problem-editor-field" style={{ marginBottom: "20px" }}>
+                <span className="problem-editor-label">Cognitive Traits tested by this challenge</span>
+                <small>Select one or more cognitive abilities (ratings will update upon solving)</small>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "8px" }}>
+                  {["Pattern Recognition", "Optimization Ability", "Mathematical Reasoning", "Logic Flow & Debugging", "Memory & Complexity"].map((cat) => {
+                    const isSelected = form.cognitiveCategories.includes(cat);
+                    return (
+                      <button
+                        type="button"
+                        key={cat}
+                        style={{
+                          padding: "6px 12px",
+                          borderRadius: "20px",
+                          fontSize: "0.85rem",
+                          fontWeight: "500",
+                          border: isSelected ? "1px solid #00b4d8" : "1px solid var(--border)",
+                          backgroundColor: isSelected ? "rgba(0, 180, 216, 0.15)" : "rgba(255, 255, 255, 0.05)",
+                          color: isSelected ? "#00b4d8" : "var(--muted)",
+                          cursor: "pointer",
+                          transition: "all 0.2s ease"
+                        }}
+                        onClick={() => {
+                          const current = [...form.cognitiveCategories];
+                          if (current.includes(cat)) {
+                            setField("cognitiveCategories", current.filter((c) => c !== cat));
+                          } else {
+                            setField("cognitiveCategories", [...current, cat]);
+                          }
+                        }}
+                      >
+                        {isSelected ? "✓ " : "+ "}
+                        {cat}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
               <div className="problem-editor-grid four">
                 <Field label="Time limit" hint="Milliseconds">

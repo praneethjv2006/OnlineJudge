@@ -33,6 +33,19 @@ const questionSchema = new mongoose.Schema(
       required: true,
       min: 100,
     },
+    category: {
+      type: String,
+      default: "Coding",
+      trim: true,
+    },
+    cognitiveCategories: {
+      type: [String],
+      default: [],
+    },
+    topics: {
+      type: [String],
+      default: [],
+    },
     testCases: {
       type: [testCaseSchema],
       validate: [(value) => value.length > 0, "At least one test case is required."],

@@ -109,6 +109,18 @@ const problemSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    codeTemplates: {
+      type: Object,
+      default: {},
+    },
+    driverCode: {
+      type: Object,
+      default: {},
+    },
+    isFunctionMode: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,

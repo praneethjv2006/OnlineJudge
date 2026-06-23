@@ -869,6 +869,7 @@ body.is-resizing .resizer-v {
 
 .tc-tab.passed { color: #2cbb5d; }
 .tc-tab.failed { color: #ef4743; }
+.tc-tab.neutral { color: var(--accent); }
 
 .tc-results {
   flex: 1;
@@ -918,6 +919,10 @@ body.fullscreen-contest-active .app-main {
 
 body.fullscreen-contest-active .topbar {
   display: none;
+}
+
+.verdict-line .neutral {
+  color: var(--accent);
 }
 
 @media (max-width: 900px) {

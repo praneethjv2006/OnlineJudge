@@ -22,8 +22,17 @@ function ProblemText({ text }) {
     <div className="problem-rich-text">
       {blocks.map((block, blockIndex) => {
         const lines = block.split("\n").map((line) => line.trim()).filter(Boolean);
+        const isCodeBlock = /^```/.test(block) && /```$/.test(block);
         const isBulletList = lines.every((line) => /^[-*•]\s+/.test(line));
         const isNumberedList = lines.every((line) => /^\d+[.)]\s+/.test(line));
+
+        if (isCodeBlock) {
+          return (
+            <pre key={`block-${blockIndex}`} className="problem-code-block">
+              <code>{block.replace(/^```\w*\n?/, "").replace(/```$/, "").trim()}</code>
+            </pre>
+          );
+        }
 
         if (isBulletList) {
           return (

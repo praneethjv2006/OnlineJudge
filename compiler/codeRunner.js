@@ -249,9 +249,17 @@ const runCodeAgainstTestCases = async ({ code, language, testCases, timeLimitMs 
         input: testCase.input ?? "",
         timeLimitMs,
       }).then((execution) => {
+        const hasExpectedOutput =
+          testCase.expectedOutput !== undefined &&
+          testCase.expectedOutput !== null &&
+          String(testCase.expectedOutput).trim() !== "";
         let verdict = execution.verdict;
         if (!verdict) {
-          verdict = compareOutput(execution.stdout, testCase.expectedOutput) ? "Accepted" : "Wrong Answer";
+          verdict = hasExpectedOutput
+            ? compareOutput(execution.stdout, testCase.expectedOutput)
+              ? "Accepted"
+              : "Wrong Answer"
+            : "Executed";
         }
         return {
           id: index + 1,

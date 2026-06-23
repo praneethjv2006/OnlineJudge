@@ -1741,6 +1741,102 @@ tr:hover .problem-delete-btn {
   font-size: 0.82rem;
 }
 
+.problem-rich-editor-field {
+  display: grid;
+  gap: 9px;
+  min-width: 0;
+}
+
+.problem-rich-editor-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.problem-rich-editor-heading > div:first-child {
+  display: grid;
+  gap: 5px;
+}
+
+.problem-rich-editor-heading small {
+  color: #666;
+  font-size: 0.69rem;
+  line-height: 1.45;
+}
+
+.problem-rich-editor-tabs,
+.problem-rich-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.problem-rich-editor-tabs button,
+.problem-rich-toolbar button {
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #aaa;
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 7px 10px;
+  transition: all 0.18s ease;
+}
+
+.problem-rich-editor-tabs button:hover,
+.problem-rich-toolbar button:hover,
+.problem-rich-editor-tabs button.active {
+  border-color: rgba(255, 161, 22, 0.35);
+  background: rgba(255, 161, 22, 0.1);
+  color: var(--accent);
+}
+
+.problem-rich-editor-field textarea {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0 0 12px 12px;
+  outline: 0;
+  background: #0b0e12;
+  color: #eee;
+  padding: 13px 14px;
+  font: inherit;
+  line-height: 1.7;
+  resize: vertical;
+  transition: 0.2s ease;
+}
+
+.problem-rich-editor-field textarea:focus {
+  border-color: rgba(255, 161, 22, 0.55);
+  box-shadow: 0 0 0 3px rgba(255, 161, 22, 0.08);
+}
+
+.problem-rich-toolbar {
+  margin-bottom: -9px;
+  padding: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 0;
+  border-radius: 12px 12px 0 0;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.problem-rich-preview {
+  min-height: 160px;
+  padding: 16px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent),
+    #0b0e12;
+}
+
+.problem-rich-preview-empty {
+  margin: 0;
+  color: #6f6f6f;
+}
+
 .problem-case-group {
   display: grid;
   gap: 14px;
@@ -2088,6 +2184,430 @@ tr:hover .problem-delete-btn {
   font-size: 0.83rem;
 }
 
+/* ================================================================
+   Problem Header Redesign (Clean Title + Difficulty Only)
+   ================================================================ */
+
+.problem-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.problem-header-top .problem-display-title {
+  margin: 0;
+  flex: 1;
+}
+
+/* ================================================================
+   Accordions Section Styles
+   ================================================================ */
+
+.problem-accordions-section {
+  margin-top: 32px;
+  padding-top: 28px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.accordion-item {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.02);
+  transition: all 0.2s ease;
+}
+
+.accordion-item:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.accordion-button {
+  width: 100%;
+  padding: 16px 20px;
+  border: none;
+  background: transparent;
+  color: #e0e0e0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  transition: all 0.2s ease;
+}
+
+.accordion-button:hover {
+  color: #fff;
+}
+
+.accordion-button.expanded {
+  color: var(--accent);
+  background: rgba(255, 161, 22, 0.04);
+}
+
+.accordion-content {
+  padding: 12px 20px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Accordion Grid for limits/stats */
+.accordion-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.accordion-item-box {
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.accordion-item-box label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #888;
+}
+
+.accordion-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Tags in accordions */
+.accordion-tags-group {
+  margin-bottom: 16px;
+}
+
+.accordion-tags-group:last-child {
+  margin-bottom: 0;
+}
+
+.accordion-tags-group label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #888;
+  margin-bottom: 10px;
+}
+
+.tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tag-badge {
+  display: inline-flex;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: #d0d0d0;
+  transition: all 0.2s ease;
+}
+
+.tag-badge.topic-badge {
+  background: rgba(106, 217, 255, 0.08);
+  color: #6ad9ff;
+  border-color: rgba(106, 217, 255, 0.15);
+}
+
+.tag-badge.topic-badge:hover {
+  background: rgba(106, 217, 255, 0.15);
+  border-color: rgba(106, 217, 255, 0.25);
+}
+
+.tag-badge.skill-badge {
+  background: rgba(255, 161, 22, 0.08);
+  color: var(--accent);
+  border-color: rgba(255, 161, 22, 0.15);
+}
+
+.tag-badge.skill-badge:hover {
+  background: rgba(255, 161, 22, 0.15);
+  border-color: rgba(255, 161, 22, 0.25);
+}
+
+/* Interview Poll Accordion */
+.interview-poll-box {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.poll-question {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #e0e0e0;
+}
+
+.poll-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+.poll-btn {
+  flex: 1;
+  padding: 12px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #d0d0d0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.poll-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+.poll-btn.yes-btn.selected {
+  background: rgba(44, 187, 93, 0.12);
+  border-color: rgba(44, 187, 93, 0.3);
+  color: #2cbb5d;
+}
+
+.poll-btn.no-btn.selected {
+  background: rgba(239, 71, 67, 0.12);
+  border-color: rgba(239, 71, 67, 0.3);
+  color: #ef4743;
+}
+
+.poll-stats {
+  margin-top: 8px;
+}
+
+.stat-bar {
+  display: flex;
+  border-radius: 6px;
+  overflow: hidden;
+  height: 28px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.stat-bar-segment {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #fff;
+  transition: width 0.3s ease;
+}
+
+.stat-bar-segment.yes-segment {
+  background: linear-gradient(90deg, #2cbb5d, #26a641);
+}
+
+.stat-bar-segment.no-segment {
+  background: linear-gradient(90deg, #ef4743, #e63935);
+}
+
+/* Difficulty & Acceptance Stats */
+.stats-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+}
+
+.stat-card {
+  padding: 18px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+}
+
+.stat-card label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #888;
+}
+
+.difficulty-badge-large {
+  font-size: 1.3rem;
+  font-weight: 700;
+  padding: 8px 14px;
+  border-radius: 6px;
+  letter-spacing: 0.02em;
+}
+
+.difficulty-badge-large[data-difficulty="easy"] {
+  background: rgba(44, 187, 93, 0.12);
+  color: #2cbb5d;
+}
+
+.difficulty-badge-large[data-difficulty="medium"] {
+  background: rgba(255, 161, 22, 0.12);
+  color: #ffa116;
+}
+
+.difficulty-badge-large[data-difficulty="hard"] {
+  background: rgba(239, 71, 67, 0.12);
+  color: #ef4743;
+}
+
+.acceptance-rate {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.rate-number {
+  display: block;
+}
+
+/* ================================================================
+   Editor Toolbar Enhancements
+   ================================================================ */
+
+.editor-toolbar-clean {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  gap: 12px;
+}
+
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mode-selector select {
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #d0d0d0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mode-selector select:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+.mode-selector select:focus {
+  outline: none;
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(255, 161, 22, 0.1);
+}
+
+.lang-picker select {
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #d0d0d0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.lang-picker select:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+.lang-picker select:focus {
+  outline: none;
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(255, 161, 22, 0.1);
+}
+
+.reset-btn {
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  background: transparent;
+  color: #d0d0d0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.reset-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+@media (max-width: 768px) {
+  .accordion-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .poll-buttons {
+    flex-direction: column;
+  }
+
+  .poll-btn {
+    width: 100%;
+  }
+}
 .example-io-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(120px, 0.45fr);
@@ -2114,6 +2634,70 @@ tr:hover .problem-delete-btn {
   color: #aaa;
   font-size: 0.84rem;
   line-height: 1.65;
+}
+
+.example-explanation-dropdown {
+  margin-top: 12px;
+  border: 1px solid rgba(255, 161, 22, 0.14);
+  border-radius: 10px;
+  background: rgba(255, 161, 22, 0.035);
+  overflow: hidden;
+}
+
+.example-explanation-dropdown summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 14px;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 0.73rem;
+  font-weight: 850;
+  letter-spacing: 0.07em;
+  list-style: none;
+  text-transform: uppercase;
+}
+
+.example-explanation-dropdown summary::-webkit-details-marker {
+  display: none;
+}
+
+.example-explanation-dropdown summary::after {
+  content: "›";
+  color: var(--accent);
+  font-size: 1.1rem;
+  transform: rotate(90deg);
+  transition: transform 0.18s ease;
+}
+
+.example-explanation-dropdown[open] summary::after {
+  transform: rotate(-90deg);
+}
+
+.example-explanation-dropdown .example-explanation {
+  margin: 0;
+  border: 0;
+  border-top: 1px solid rgba(255, 161, 22, 0.12);
+  border-radius: 0;
+}
+
+.problem-code-block {
+  margin: 12px 0;
+  padding: 12px 14px;
+  overflow-x: auto;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: #0b0e12;
+}
+
+.problem-code-block code {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #e5e7eb;
+  font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
+  font-size: 0.84rem;
+  white-space: pre;
 }
 
 .problem-notes-box .problem-rich-text {
@@ -2411,6 +2995,99 @@ tr:hover .problem-delete-btn {
 .problem-category-badge:hover { background: rgba(16,185,129,0.2); }
 
 .problems-table-area { min-width: 0; }
+
+/* Polished problem-reading experience: clean title, metadata at the end */
+.problem-display-header {
+  position: relative;
+  overflow: hidden;
+  padding: 22px 24px;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  border-top: 2px solid rgba(255, 161, 22, 0.75);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at top right, rgba(255, 161, 22, 0.14), transparent 34%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.012));
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.22);
+}
+
+.problem-display-header::after {
+  content: "";
+  position: absolute;
+  inset: auto 20px 0 20px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 161, 22, 0.45), transparent);
+}
+
+.problem-display-kicker {
+  color: var(--accent);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.problem-display-subtitle {
+  max-width: 720px;
+  margin: 12px 0 0;
+  color: #9f9f9f;
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.problem-document {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 180px),
+    #171717;
+}
+
+.problem-document .problem-section-title svg {
+  color: var(--accent);
+}
+
+.problem-accordions-section {
+  margin: 0;
+  padding: 18px 22px 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.075);
+  background:
+    radial-gradient(circle at bottom left, rgba(255, 161, 22, 0.08), transparent 28%),
+    rgba(0, 0, 0, 0.08);
+}
+
+.accordion-item {
+  border-color: rgba(255, 255, 255, 0.075);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.accordion-button {
+  min-height: 48px;
+}
+
+.accordion-button > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.accordion-button > span svg {
+  color: var(--accent);
+}
+
+.accordion-button.expanded {
+  background: rgba(255, 161, 22, 0.055);
+}
+
+.accordion-item-box,
+.stat-card {
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.accordion-value {
+  color: #f5f5f5;
+}
+
+.tag-badge {
+  border-radius: 999px;
+}
 
 @media (max-width: 768px) {
   .problems-layout.with-sidebar { grid-template-columns: 1fr; }

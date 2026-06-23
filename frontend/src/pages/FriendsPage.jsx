@@ -429,7 +429,7 @@ function FriendsPage() {
                 <input
                   type="search"
                   className="friends-search-input"
-                  placeholder="Search users by name…"
+                  placeholder="Search users by name or email…"
                   value={searchQuery}
                   onChange={(e) => handleSearch(e.target.value)}
                   autoFocus

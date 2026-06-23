@@ -34,9 +34,13 @@ const searchUsers = async (req, res) => {
       return res.json({ users: [] });
     }
 
+    const escapedQuery = query.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
     const users = await User.find({
       _id: { $ne: me._id },
-      name: { $regex: query, $options: "i" },
+      $or: [
+        { name: { $regex: "\\b" + escapedQuery, $options: "i" } },
+        { email: { $regex: "^" + escapedQuery, $options: "i" } }
+      ]
     })
       .select("_id name email createdAt")
       .limit(20);

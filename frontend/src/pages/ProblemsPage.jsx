@@ -389,22 +389,6 @@ function ProblemsPage() {
                               {problem.title}
                             </Link>
                           </div>
-                          {((problem.topics && problem.topics.length > 0) || (problem.tags && problem.tags.length > 0)) && (
-                            <div className="problem-list-tags" style={{ marginTop: "4px" }}>
-                              {problem.topics?.map((topic) => (
-                                <span
-                                  key={`topic-${topic}`}
-                                  style={{ color: "#00b4d8", fontWeight: "600", cursor: "pointer" }}
-                                  onClick={() => { if (!selectedTopics.includes(topic)) toggleFilter(setSelectedTopics, topic); }}
-                                >
-                                  #{topic}
-                                </span>
-                              ))}
-                              {problem.tags?.filter((tag) => !problem.topics?.includes(tag)).slice(0, 3).map((tag) => (
-                                <span key={`tag-${tag}`}>{tag}</span>
-                              ))}
-                            </div>
-                          )}
                         </td>
                         <td>
                           <span className={`difficulty-tag-v2 ${problem.difficulty}`}>

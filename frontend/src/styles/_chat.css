@@ -1,8 +1,13 @@
-/* ─── Messages / Chat Page ──────────────────────────────────────────────────── */
+/* Container override to stretch full width under navbar */
+.app-main-messages {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
 
 .messages-layout {
   display: flex;
-  height: calc(100vh - 70px); /* subtract navbar */
+  height: calc(100vh - 64px); /* subtract 64px navbar */
   overflow: hidden;
   background: var(--color-bg);
 }

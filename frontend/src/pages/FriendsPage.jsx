@@ -380,14 +380,9 @@ function FriendsPage() {
   return (
     <>
       <div className="friends-page-layout">
-<<<<<<< HEAD
         {/* ── Header ── */}
         <div className="friends-page-header">
-=======
-      {/* Header */}
-      <div className="friends-page-header">
-        <div>
->>>>>>> b9e71800b737d0d4ce8a778549f9a596a4164c5c
+          <div>
           <span className="friends-eyebrow">Social Hub</span>
           <h1 className="friends-title">Friends</h1>
           <p className="friends-subtitle">Connect with coders, share solutions, and compete together.</p>
@@ -404,6 +399,7 @@ function FriendsPage() {
             <span><strong>{incomingRequests.length}</strong> Pending</span>
           </div>
         </div>
+      </div>
 
         {/* ── Tabs ── */}
         <nav className="friends-tabs">
@@ -592,7 +588,7 @@ function FriendsPage() {
                 ) : incomingRequests.length === 0 ? (
                   <div className="friends-empty-small">No pending incoming requests.</div>
                 ) : (
-                  <div className="friend-request-list">
+                  <div className="friends-request-list">
                     {incomingRequests.map((r) => (
                       <RequestCard
                         key={r._id}
@@ -606,17 +602,16 @@ function FriendsPage() {
                 )}
               </div>
 
-              {/* Sent */}
+              {/* Sent Requests */}
               <div className="friends-section" style={{ marginTop: 32 }}>
                 <h3 className="friends-section-title">
-                  <Shield size={15} />
                   Sent Requests
                   <span className="friends-count">{sentRequests.length}</span>
                 </h3>
                 {sentRequests.length === 0 ? (
                   <div className="friends-empty-small">No pending outgoing requests.</div>
                 ) : (
-                  <div className="friend-request-list">
+                  <div className="friends-request-list">
                     {sentRequests.map((r) => (
                       <RequestCard
                         key={r._id}
@@ -633,8 +628,7 @@ function FriendsPage() {
         </div>
       </div>
 
-<<<<<<< HEAD
-      {/* ── Friend Profile Modal ── */}
+      {/* Friend Profile Modal */}
       {profileFriend && (
         <FriendProfileModal
           friend={profileFriend}
@@ -651,231 +645,6 @@ function FriendsPage() {
       )}
     </>
   );
-=======
-      {/* Tab Navigation */}
-      <nav className="friends-tabs">
-        {TABS.map(({ id, label, icon: Icon }) => (
-          <button
-            key={id}
-            className={`friends-tab ${activeTab === id ? "active" : ""}`}
-            onClick={() => setActiveTab(id)}
-          >
-            <Icon size={16} />
-            {label}
-            {id === "requests" && incomingRequests.length > 0 && (
-              <span className="friends-tab-badge">{incomingRequests.length}</span>
-            )}
-          </button>
-        ))}
-      </nav>
-
-      {/* Tab Content */}
-      <div className="friends-content">
-
-        {/* ── Discover Tab ── */}
-        {activeTab === "discover" && (
-          <div className="friends-discover">
-            {/* Search bar */}
-            <div className="friends-search-bar">
-              <Search size={18} className="friends-search-icon" />
-              <input
-                type="search"
-                className="friends-search-input"
-                placeholder="Search users by name…"
-                value={searchQuery}
-                onChange={(e) => handleSearch(e.target.value)}
-                autoFocus
-              />
-              {searchQuery && (
-                <button onClick={() => { setSearchQuery(""); setSearchResults([]); }}>
-                  <X size={16} />
-                </button>
-              )}
-            </div>
-
-            {/* Results section */}
-            {searchQuery.trim().length >= 2 && (
-              <div className="friends-section">
-                <h3 className="friends-section-title">
-                  Search Results
-                  <span className="friends-count">{searchResults.length} user{searchResults.length !== 1 ? "s" : ""}</span>
-                </h3>
-                {searchResults.length === 0 ? (
-                  <div className="friends-empty">No users found for "{searchQuery}"</div>
-                ) : (
-                  <div className="friends-grid">
-                    {searchResults.map((u) => (
-                      <UserCard
-                        key={u._id}
-                        user={u}
-                        currentUserId={currentUserId}
-                        onAction={handleUserAction}
-                        onMessage={handleOpenMessage}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Suggestions */}
-            {!searchQuery && (
-              <div className="friends-section">
-                <div className="friends-section-header">
-                  <h3 className="friends-section-title">
-                    <Sparkles size={16} />
-                    People You May Know
-                  </h3>
-                  <button className="friends-refresh-btn" onClick={loadSuggestions}>
-                    <RefreshCw size={14} />
-                  </button>
-                </div>
-                {isLoading ? (
-                  <div className="friends-loading">Finding suggestions…</div>
-                ) : suggestions.length === 0 ? (
-                  <div className="friends-empty">
-                    <Users size={40} />
-                    <h3>No suggestions yet</h3>
-                    <p>Search for users to connect with coders on this platform.</p>
-                  </div>
-                ) : (
-                  <div className="friends-grid">
-                    {suggestions.map((u) => (
-                      <UserCard
-                        key={u._id}
-                        user={u}
-                        currentUserId={currentUserId}
-                        onAction={handleUserAction}
-                        onMessage={handleOpenMessage}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── My Friends Tab ── */}
-        {activeTab === "friends" && (
-          <div>
-            <div className="friends-section">
-              <h3 className="friends-section-title">
-                <Users size={16} />
-                My Friends
-                <span className="friends-count">{friendsTotal} total</span>
-              </h3>
-              {isLoading && friends.length === 0 ? (
-                <div className="friends-loading">Loading friends…</div>
-              ) : friends.length === 0 ? (
-                <div className="friends-empty">
-                  <UserPlus size={40} />
-                  <h3>No friends yet</h3>
-                  <p>Go to Discover to find and connect with coders.</p>
-                </div>
-              ) : (
-                <>
-                  <div className="friends-grid">
-                    {friends.map((u) => (
-                      <UserCard
-                        key={u._id}
-                        user={u}
-                        currentUserId={currentUserId}
-                        onAction={handleUserAction}
-                        onMessage={handleOpenMessage}
-                        onViewProfile={setProfileFriend}
-                      />
-                    ))}
-                  </div>
-                  {friendsHasMore && (
-                    <div className="friends-load-more">
-                      <button
-                        className="friend-btn friend-btn-ghost"
-                        onClick={() => loadFriends(friendsPage + 1)}
-                        disabled={isLoading}
-                      >
-                        {isLoading ? "Loading…" : "Load More"} <ChevronRight size={16} />
-                      </button>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* ── Requests Tab ── */}
-        {activeTab === "requests" && (
-          <div>
-            {/* Incoming */}
-            <div className="friends-section">
-              <h3 className="friends-section-title">
-                <UserCheck size={16} />
-                Incoming Requests
-                <span className="friends-count">{incomingRequests.length}</span>
-              </h3>
-              {isLoading ? (
-                <div className="friends-loading">Loading…</div>
-              ) : incomingRequests.length === 0 ? (
-                <div className="friends-empty-small">No pending incoming requests.</div>
-              ) : (
-                <div className="friends-request-list">
-                  {incomingRequests.map((r) => (
-                    <RequestCard
-                      key={r._id}
-                      request={r}
-                      type="incoming"
-                      onAccept={handleAccept}
-                      onReject={handleReject}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Sent */}
-            <div className="friends-section" style={{ marginTop: "32px" }}>
-              <h3 className="friends-section-title">
-                Sent Requests
-                <span className="friends-count">{sentRequests.length}</span>
-              </h3>
-              {sentRequests.length === 0 ? (
-                <div className="friends-empty-small">No pending outgoing requests.</div>
-              ) : (
-                <div className="friends-request-list">
-                  {sentRequests.map((r) => (
-                    <RequestCard
-                      key={r._id}
-                      request={r}
-                      type="sent"
-                      onCancel={handleCancel}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-
-    {/* Friend Profile Modal */}
-    {profileFriend && (
-      <FriendProfileModal
-        friend={profileFriend}
-        onClose={() => setProfileFriend(null)}
-        onMessage={(convId) => {
-          setProfileFriend(null);
-          navigate("/messages", { state: { conversationId: convId } });
-        }}
-        onUnfriend={(friendId) => {
-          setFriends((prev) => prev.filter((f) => f._id !== friendId));
-          setProfileFriend(null);
-        }}
-      />
-    )}
-  </>);
->>>>>>> b9e71800b737d0d4ce8a778549f9a596a4164c5c
 }
 
 export default FriendsPage;

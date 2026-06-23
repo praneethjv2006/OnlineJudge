@@ -64,10 +64,17 @@ function AppShell({ user, onSignOut }) {
     location.pathname.startsWith("/problems/") ||
     location.pathname === "/shadow-code/dojo";
 
+  const isMessagesPage = location.pathname === "/messages";
+  const mainClassName = isFullScreen
+    ? ""
+    : isMessagesPage
+    ? "app-main-messages"
+    : "app-main";
+
   return (
     <div className="app-shell">
       {!isFullScreen && <NavBar user={user} onSignOut={onSignOut} />}
-      <main className={isFullScreen ? "" : "app-main"}>
+      <main className={mainClassName}>
         {/* All child routes consume { user } via useAppContext() */}
         <Outlet context={{ user }} />
       </main>

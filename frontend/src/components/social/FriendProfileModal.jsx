@@ -9,7 +9,7 @@ import { toast } from "../common/Toast";
 // ─── Avatar helper ────────────────────────────────────────────────────────────
 function FriendAvatar({ name, size = 80 }) {
   const colors = [
-    "#6366f1","#8b5cf6","#06b6d4","#10b981","#f59e0b","#ef4444","#ec4899"
+    "#ffa116","#8b5cf6","#06b6d4","#10b981","#f59e0b","#ef4444","#ec4899"
   ];
   const color = colors[(name?.charCodeAt(0) || 0) % colors.length];
   return (
@@ -94,7 +94,8 @@ function FriendProfileModal({ friend, onClose, onMessage, onUnfriend }) {
   };
 
   const handleUnfriend = async () => {
-    if (!window.confirm(`Remove ${friend.name} from friends?`)) return;
+    const name = friend.name || profile?.user?.name || "this user";
+    if (!window.confirm(`Remove ${name} from friends?`)) return;
     setActionLoading("unfriend");
     try {
       await unfriend(friend._id);
@@ -107,6 +108,9 @@ function FriendProfileModal({ friend, onClose, onMessage, onUnfriend }) {
       setActionLoading(null);
     }
   };
+
+  const displayName = friend.name || profile?.user?.name || "Loading...";
+  const displayEmail = friend.email || profile?.user?.email || "";
 
   const memberSince = profile?.user?.createdAt
     ? new Date(profile.user.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "long" })
@@ -131,10 +135,10 @@ function FriendProfileModal({ friend, onClose, onMessage, onUnfriend }) {
           <>
             {/* ── Header ── */}
             <div className="fp-header">
-              <FriendAvatar name={friend.name} size={80} />
+              <FriendAvatar name={displayName} size={80} />
               <div className="fp-header-info">
-                <h2 className="fp-name">{friend.name}</h2>
-                <p className="fp-email">{friend.email}</p>
+                <h2 className="fp-name">{displayName}</h2>
+                <p className="fp-email">{displayEmail}</p>
                 <p className="fp-member-since">
                   <Calendar size={13} />
                   Member since {memberSince}
@@ -166,7 +170,7 @@ function FriendProfileModal({ friend, onClose, onMessage, onUnfriend }) {
                 label="Problems Solved"
                 value={profile?.totalSolved ?? 0}
                 icon={Code}
-                color="#6366f1"
+                color="#ffa116"
               />
               <StatCard
                 label="Submissions"
@@ -178,7 +182,7 @@ function FriendProfileModal({ friend, onClose, onMessage, onUnfriend }) {
                 label="Best Streak"
                 value="—"
                 icon={Flame}
-                color="#f59e0b"
+                color="#ef4444"
               />
               <StatCard
                 label="Rank"
@@ -190,7 +194,7 @@ function FriendProfileModal({ friend, onClose, onMessage, onUnfriend }) {
                     ? "Advanced"
                     : "Beginner"
                 }
-                color="#a855f7"
+                color="#f59e0b"
               />
             </div>
 

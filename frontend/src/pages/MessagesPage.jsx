@@ -12,18 +12,11 @@ import {
   toggleReaction, leaveGroup,
 } from "../services/chatService";
 import { getMyFriends } from "../services/friendService";
+import data from "@emoji-mart/data";
+import Picker from "@emoji-mart/react";
 
 // ─── Quick emoji set ──────────────────────────────────────────────────────────
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🔥", "🎉", "👏"];
-
-const EMOJI_GRID = [
-  ["😀","😂","😍","🤔","😎","😢","😡","🥳","🤩","😴"],
-  ["👍","👎","❤️","🔥","🎉","✅","❌","⭐","💯","🚀"],
-  ["🙏","👋","💪","🤝","✌️","👏","🤜","🤛","🫶","💫"],
-  ["😮","😱","🤯","🥺","😅","😬","🙃","🤗","🫠","😇"],
-  ["👀","💭","💬","🗣️","📢","🔔","📌","🏆","🎯","💡"],
-  ["🐱","🐶","🦊","🐼","🦁","🐸","🦋","🌸","🌈","⚡"],
-];
 
 // ─── 48-hour countdown hook ───────────────────────────────────────────────────
 function useCountdown(expiresAt) {
@@ -316,35 +309,7 @@ function CreateGroupModal({ friends, onClose, onCreate }) {
   );
 }
 
-// ─── Emoji Picker ─────────────────────────────────────────────────────────────
-function EmojiPicker({ onSelect, onClose }) {
-  const ref = useRef(null);
-  useEffect(() => {
-    const handler = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) onClose();
-    };
-    setTimeout(() => document.addEventListener("pointerdown", handler), 50);
-    return () => document.removeEventListener("pointerdown", handler);
-  }, [onClose]);
-
-  return (
-    <div className="emoji-picker" ref={ref}>
-      <div className="emoji-picker-grid">
-        {EMOJI_GRID.map((row, ri) =>
-          row.map((emoji, ci) => (
-            <button
-              key={`${ri}-${ci}`}
-              className="emoji-picker-btn"
-              onClick={() => onSelect(emoji)}
-            >
-              {emoji}
-            </button>
-          ))
-        )}
-      </div>
-    </div>
-  );
-}
+// EmojiPicker component removed - replaced with emoji-mart Picker
 
 // ─── Group Info Panel ─────────────────────────────────────────────────────────
 function GroupInfoPanel({ conv, currentUserId, onLeave, onClose }) {
@@ -457,10 +422,22 @@ function MessagesPage() {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [replyTo, setReplyTo] = useState(null); // message being replied to
   const [showGroupInfo, setShowGroupInfo] = useState(false);
-  const [unreadCounts, setUnreadCounts] = useState({});
+  const [msgSearchQuery, setMsgSearchQuery] = useState("");
+  const [showMsgSearch, setShowMsgSearch] = useState(false);
+
+  const [lastReadTimes, setLastReadTimes] = useState(() => {
+    try {
+      const stored = window.localStorage.getItem("chat_last_read_times");
+      return stored ? JSON.parse(stored) : {};
+    } catch {
+      return {};
+    }
+  });
+
   const messagesEndRef = useRef(null);
   const pollRef = useRef(null);
   const inputRef = useRef(null);
+  const emojiPickerRef = useRef(null);
   const prevMessagesRef = useRef([]);
 
   const currentUserId = user?.id || user?._id;
@@ -470,11 +447,25 @@ function MessagesPage() {
     [conversations, activeConvId]
   );
 
-  // Load conversations list
+  const updateLastReadTime = useCallback((convId) => {
+    if (!convId) return;
+    setLastReadTimes((prev) => {
+      const updated = { ...prev, [convId]: new Date().toISOString() };
+      try {
+        window.localStorage.setItem("chat_last_read_times", JSON.stringify(updated));
+      } catch { /* ignore */ }
+      return updated;
+    });
+  }, []);
+
+  // Load conversations list and poll periodically
   useEffect(() => {
     if (!user) return;
     loadConversations();
     loadFriends();
+
+    const interval = setInterval(loadConversations, 8000);
+    return () => clearInterval(interval);
   }, [user]);
 
   // Set active conversation from navigation state
@@ -489,15 +480,26 @@ function MessagesPage() {
     if (!activeConvId) return;
     loadMessages(activeConvId, 1);
     startPolling(activeConvId);
-    // Mark as read
-    setUnreadCounts((prev) => ({ ...prev, [activeConvId]: 0 }));
+    updateLastReadTime(activeConvId);
     return () => stopPolling();
-  }, [activeConvId]);
+  }, [activeConvId, updateLastReadTime]);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Close emoji picker on outside click
+  useEffect(() => {
+    if (!showEmojiPicker) return;
+    const handler = (e) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(e.target)) {
+        setShowEmojiPicker(false);
+      }
+    };
+    document.addEventListener("pointerdown", handler);
+    return () => document.removeEventListener("pointerdown", handler);
+  }, [showEmojiPicker]);
 
   const loadConversations = async () => {
     try {
@@ -532,22 +534,13 @@ function MessagesPage() {
       try {
         const data = await getMessages(convId, 1, 50);
         const newMsgs = data.messages || [];
-        setMessages((prev) => {
-          // Track unread (messages newer than previous last message that are not from me)
-          if (convId !== activeConvId && prev.length > 0) {
-            const lastPrev = prev[prev.length - 1];
-            const newer = newMsgs.filter(
-              (m) => m.createdAt > lastPrev?.createdAt && String(m.sender?._id || m.sender) !== String(currentUserId)
-            );
-            if (newer.length > 0) {
-              setUnreadCounts((u) => ({ ...u, [convId]: (u[convId] || 0) + newer.length }));
-            }
-          }
-          return newMsgs;
-        });
+        setMessages(newMsgs);
+        if (newMsgs.length > 0 && convId === activeConvId) {
+          updateLastReadTime(convId);
+        }
       } catch { /* silent */ }
     }, 5000);
-  }, [activeConvId, currentUserId]);
+  }, [activeConvId, updateLastReadTime]);
 
   const stopPolling = () => {
     if (pollRef.current) clearInterval(pollRef.current);
@@ -559,7 +552,9 @@ function MessagesPage() {
     setMsgPage(1);
     setReplyTo(null);
     setShowGroupInfo(false);
-    setUnreadCounts((prev) => ({ ...prev, [convId]: 0 }));
+    setMsgSearchQuery("");
+    setShowMsgSearch(false);
+    updateLastReadTime(convId);
   };
 
   const handleSend = async () => {
@@ -586,6 +581,7 @@ function MessagesPage() {
             : c
         )
       );
+      updateLastReadTime(activeConvId);
     } catch (err) {
       toast.error(err?.response?.data?.message || "Failed to send message.");
     }
@@ -636,10 +632,24 @@ function MessagesPage() {
     }
   };
 
-  const handleEmojiSelect = (emoji) => {
-    setInputText((prev) => prev + emoji);
+  const handleEmojiSelect = (emojiChar) => {
+    const textarea = inputRef.current;
+    if (!textarea) {
+      setInputText((prev) => prev + emojiChar);
+      return;
+    }
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    const before = text.substring(0, start);
+    const after = text.substring(end, text.length);
+    setInputText(before + emojiChar + after);
     setShowEmojiPicker(false);
-    inputRef.current?.focus();
+    
+    setTimeout(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start + emojiChar.length, start + emojiChar.length);
+    }, 0);
   };
 
   const convDisplayName = (conv) => {
@@ -651,11 +661,18 @@ function MessagesPage() {
     return other?.name || "Unknown";
   };
 
+  // Filter messages based on within-chat search
+  const filteredMessages = useMemo(() => {
+    if (!msgSearchQuery.trim()) return messages;
+    const q = msgSearchQuery.toLowerCase();
+    return messages.filter((m) => m.content?.toLowerCase().includes(q));
+  }, [messages, msgSearchQuery]);
+
   // Inject date separators into messages
   const messagesWithSeparators = useMemo(() => {
     const result = [];
     let lastDate = null;
-    for (const msg of messages) {
+    for (const msg of filteredMessages) {
       const dateStr = new Date(msg.createdAt).toDateString();
       if (dateStr !== lastDate) {
         result.push({ type: "separator", date: msg.createdAt, key: `sep-${dateStr}` });
@@ -664,7 +681,7 @@ function MessagesPage() {
       result.push({ type: "message", data: msg, key: msg._id });
     }
     return result;
-  }, [messages]);
+  }, [filteredMessages]);
 
   // Filter conversations by search
   const filteredConversations = useMemo(() => {
@@ -724,16 +741,24 @@ function MessagesPage() {
               )}
             </div>
           ) : (
-            filteredConversations.map((conv) => (
-              <ConvItem
-                key={conv._id}
-                conv={conv}
-                isActive={conv._id === activeConvId}
-                onClick={() => handleSelectConv(conv._id)}
-                currentUserId={currentUserId}
-                unread={unreadCounts[conv._id] || 0}
-              />
-            ))
+            filteredConversations.map((conv) => {
+              const lastRead = lastReadTimes[conv._id];
+              const isUnread =
+                conv.lastMessage?.at &&
+                String(conv.lastMessage.sender?._id || conv.lastMessage.sender) !== String(currentUserId) &&
+                (!lastRead || new Date(conv.lastMessage.at) > new Date(lastRead));
+
+              return (
+                <ConvItem
+                  key={conv._id}
+                  conv={conv}
+                  isActive={conv._id === activeConvId}
+                  onClick={() => handleSelectConv(conv._id)}
+                  currentUserId={currentUserId}
+                  unread={isUnread ? 1 : 0}
+                />
+              );
+            })
           )}
         </div>
       </aside>
@@ -778,11 +803,71 @@ function MessagesPage() {
                   )}
                 </div>
               </div>
-              <div className="msg-thread-ttl-hint">
-                <Clock size={14} />
-                Auto-delete in 48h
+              <div className="msg-header-actions" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <button
+                  className={`msg-header-action-btn ${showMsgSearch ? "active" : ""}`}
+                  onClick={() => {
+                    setShowMsgSearch(!showMsgSearch);
+                    if (showMsgSearch) setMsgSearchQuery("");
+                  }}
+                  title="Search messages"
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    color: showMsgSearch ? "var(--color-accent)" : "var(--color-text-muted)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: "4px"
+                  }}
+                >
+                  <Search size={18} />
+                </button>
+
+                <div className="msg-thread-ttl-hint">
+                  <Clock size={14} />
+                  Auto-delete in 48h
+                </div>
               </div>
             </div>
+
+            {showMsgSearch && (
+              <div className="msg-thread-search-bar" style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                padding: "10px 20px",
+                background: "var(--color-surface-1)",
+                borderBottom: "1px solid var(--color-border)",
+              }}>
+                <Search size={14} style={{ color: "var(--color-text-muted)" }} />
+                <input
+                  type="text"
+                  className="msg-thread-search-input"
+                  placeholder="Search in this conversation..."
+                  value={msgSearchQuery}
+                  onChange={(e) => setMsgSearchQuery(e.target.value)}
+                  style={{
+                    flex: 1,
+                    background: "none",
+                    border: "none",
+                    outline: "none",
+                    color: "var(--color-text-primary)",
+                    fontSize: "0.85rem",
+                  }}
+                  autoFocus
+                />
+                {msgSearchQuery && (
+                  <button
+                    onClick={() => setMsgSearchQuery("")}
+                    style={{ background: "none", border: "none", cursor: "pointer", color: "var(--color-text-muted)" }}
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+            )}
 
             <div className="msg-thread-body">
               {/* Messages Scroll */}
@@ -866,7 +951,7 @@ function MessagesPage() {
                 <div className="msg-input-row">
                   {/* Emoji picker button */}
                   {inputType === "text" && (
-                    <div className="msg-emoji-wrapper">
+                    <div className="msg-emoji-wrapper" style={{ position: "relative" }}>
                       <button
                         className="msg-emoji-btn"
                         onClick={() => setShowEmojiPicker((c) => !c)}
@@ -876,10 +961,13 @@ function MessagesPage() {
                         <Smile size={18} />
                       </button>
                       {showEmojiPicker && (
-                        <EmojiPicker
-                          onSelect={handleEmojiSelect}
-                          onClose={() => setShowEmojiPicker(false)}
-                        />
+                        <div className="emoji-picker-container" ref={emojiPickerRef} style={{ position: "absolute", bottom: "50px", left: "0px", zIndex: 1000 }}>
+                          <Picker
+                            data={data}
+                            onEmojiSelect={(emoji) => handleEmojiSelect(emoji.native)}
+                            theme="dark"
+                          />
+                        </div>
                       )}
                     </div>
                   )}

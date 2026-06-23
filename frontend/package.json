@@ -10,6 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@emoji-mart/data": "^1.2.1",
+    "@emoji-mart/react": "^1.1.1",
     "@monaco-editor/react": "^4.7.0",
     "@react-three/drei": "^9.122.0",
     "@react-three/fiber": "^8.18.0",

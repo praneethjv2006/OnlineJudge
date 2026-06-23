@@ -24,6 +24,7 @@ import ShadowCodePage from "./pages/ShadowCodePage";
 import ShadowDojoPage from "./pages/ShadowDojoPage";
 import FriendsPage from "./pages/FriendsPage";
 import MessagesPage from "./pages/MessagesPage";
+import FriendProfilePage from "./pages/FriendProfilePage";
 import { loadSession, signOut } from "./services/authService";
 import ToastContainer from "./components/common/Toast";
 
@@ -164,6 +165,7 @@ function AppRoutes() {
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/friends" element={<FriendsPage />} />
           <Route path="/messages" element={<MessagesPage />} />
+          <Route path="/profile/:userId" element={<FriendProfilePage />} />
         </Route>
       </Route>
 

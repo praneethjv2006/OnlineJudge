@@ -60,7 +60,7 @@ function FriendsPanel({ onClose }) {
     f.name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const colors = ["#6366f1","#8b5cf6","#06b6d4","#10b981","#f59e0b","#ef4444","#ec4899"];
+  const colors = ["#ffa116","#8b5cf6","#06b6d4","#10b981","#f59e0b","#ef4444","#ec4899"];
   const getColor = (name) => colors[(name?.charCodeAt(0) || 0) % colors.length];
 
   return (

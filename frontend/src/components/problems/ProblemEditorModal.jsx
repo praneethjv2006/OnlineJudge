@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import PropTypes from "prop-types";
 import {
   ArrowLeft,
@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { createProblem, updateProblem } from "../../services/problemService";
 import { toast } from "../common/Toast";
+import ProblemText from "./ProblemText";
 
 const EMPTY_EXAMPLE = { input: "", output: "", explanation: "" };
 const EMPTY_TEST_CASE = { input: "", expectedOutput: "" };
@@ -109,11 +110,132 @@ function Field({ label, hint, required, children }) {
   );
 }
 
+function RichTextEditor({
+  label,
+  hint,
+  required,
+  value,
+  onChange,
+  placeholder,
+  rows = 8,
+}) {
+  const textareaRef = useRef(null);
+  const [mode, setMode] = useState("write");
+
+  const applyFormat = (type) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selected = value.slice(start, end);
+    const before = value.slice(0, start);
+    const after = value.slice(end);
+
+    const selectedOrPlaceholder = selected || "text";
+    let replacement = selectedOrPlaceholder;
+
+    if (type === "bold") replacement = `**${selectedOrPlaceholder}**`;
+    if (type === "code") replacement = `\`${selectedOrPlaceholder}\``;
+    if (type === "codeBlock") replacement = `\`\`\`\n${selected || "code here"}\n\`\`\``;
+    if (type === "bullet") {
+      const target = selected || "first point\nsecond point";
+      replacement = target
+        .split("\n")
+        .map((line) => (line.trim() ? `- ${line.replace(/^[-*•]\s+/, "")}` : line))
+        .join("\n");
+    }
+    if (type === "numbered") {
+      const target = selected || "first step\nsecond step";
+      replacement = target
+        .split("\n")
+        .map((line, index) =>
+          line.trim() ? `${index + 1}. ${line.replace(/^\d+[.)]\s+/, "")}` : line
+        )
+        .join("\n");
+    }
+
+    onChange(`${before}${replacement}${after}`);
+
+    requestAnimationFrame(() => {
+      textarea.focus();
+      textarea.setSelectionRange(start, start + replacement.length);
+    });
+  };
+
+  return (
+    <div className="problem-rich-editor-field">
+      <div className="problem-rich-editor-heading">
+        <div>
+          <span className="problem-editor-label">
+            {label}
+            {required && <em>Required</em>}
+          </span>
+          {hint && <small>{hint}</small>}
+        </div>
+        <div className="problem-rich-editor-tabs">
+          <button
+            type="button"
+            className={mode === "write" ? "active" : ""}
+            onClick={() => setMode("write")}
+          >
+            Write
+          </button>
+          <button
+            type="button"
+            className={mode === "preview" ? "active" : ""}
+            onClick={() => setMode("preview")}
+          >
+            Preview
+          </button>
+        </div>
+      </div>
+
+      {mode === "write" ? (
+        <>
+          <div className="problem-rich-toolbar" aria-label={`${label} formatting`}>
+            <button type="button" onClick={() => applyFormat("bold")}>Bold</button>
+            <button type="button" onClick={() => applyFormat("code")}>Inline code</button>
+            <button type="button" onClick={() => applyFormat("bullet")}>Bullets</button>
+            <button type="button" onClick={() => applyFormat("numbered")}>Numbered</button>
+            <button type="button" onClick={() => applyFormat("codeBlock")}>Code block</button>
+          </div>
+          <textarea
+            ref={textareaRef}
+            value={value}
+            onChange={(event) => onChange(event.target.value)}
+            placeholder={placeholder}
+            rows={rows}
+          />
+        </>
+      ) : (
+        <div className="problem-rich-preview">
+          {value.trim() ? (
+            <ProblemText text={value} />
+          ) : (
+            <p className="problem-rich-preview-empty">Nothing to preview yet.</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 Field.propTypes = {
   label: PropTypes.string.isRequired,
   hint: PropTypes.string,
   required: PropTypes.bool,
   children: PropTypes.node.isRequired,
+};
+
+RichTextEditor.propTypes = {
+  label: PropTypes.string.isRequired,
+  hint: PropTypes.string,
+  required: PropTypes.bool,
+  value: PropTypes.string.isRequired,
+  onChange: PropTypes.func.isRequired,
+  placeholder: PropTypes.string,
+  rows: PropTypes.number,
 };
 
 function ProblemEditorModal({ problem, onClose, onSaved }) {
@@ -439,30 +561,24 @@ function ProblemEditorModal({ problem, onClose, onSaved }) {
                 </div>
               </div>
 
-              <Field
+              <RichTextEditor
                 label="Problem story"
-                hint="Optional motivation or narrative. Do not hide essential rules here."
-              >
-                <textarea
-                  value={form.problemStory}
-                  onChange={(event) => setField("problemStory", event.target.value)}
-                  placeholder="A delivery network connects N cities..."
-                  rows={4}
-                />
-              </Field>
+                hint="Optional motivation or narrative. Supports bullets, bold, inline code, and code blocks."
+                value={form.problemStory}
+                onChange={(value) => setField("problemStory", value)}
+                placeholder={"Inside the dojo...\n\n- Chamber values are positive\n- Smoke walls split the corridor"}
+                rows={6}
+              />
 
-              <Field
+              <RichTextEditor
                 label="Formal problem statement"
-                hint="Define the task precisely. Use blank lines for paragraphs and '- ' for bullet points."
+                hint="Define the task precisely. Use the toolbar or markdown-style text: - bullets, 1. steps, **bold**, `code`."
                 required
-              >
-                <textarea
-                  value={form.formalStatement}
-                  onChange={(event) => setField("formalStatement", event.target.value)}
-                  placeholder={"You are given ...\n\nYour task is to ..."}
-                  rows={8}
-                />
-              </Field>
+                value={form.formalStatement}
+                onChange={(value) => setField("formalStatement", value)}
+                placeholder={"You are given ...\n\nYour task is to ...\n\n- Explain the first rule\n- Explain the second rule"}
+                rows={10}
+              />
 
               <div className="problem-editor-grid two">
                 <Field label="Input format" required>
@@ -496,14 +612,14 @@ function ProblemEditorModal({ problem, onClose, onSaved }) {
                     rows={6}
                   />
                 </Field>
-                <Field label="Notes or hints" hint="Optional clarifications; avoid revealing the solution.">
-                  <textarea
-                    value={form.notes}
-                    onChange={(event) => setField("notes", event.target.value)}
-                    placeholder="The graph may contain parallel edges."
-                    rows={6}
-                  />
-                </Field>
+                <RichTextEditor
+                  label="Notes or hints"
+                  hint="Optional clarifications; avoid revealing the solution."
+                  value={form.notes}
+                  onChange={(value) => setField("notes", value)}
+                  placeholder={"- The graph may contain parallel edges.\n- The answer fits in 64-bit signed integer."}
+                  rows={6}
+                />
               </div>
             </section>
           )}
@@ -568,16 +684,16 @@ function ProblemEditorModal({ problem, onClose, onSaved }) {
                         />
                       </Field>
                     </div>
-                    <Field label="Explanation">
-                      <textarea
-                        value={example.explanation}
-                        onChange={(event) =>
-                          updateListItem("examples", index, "explanation", event.target.value)
-                        }
-                        placeholder="Explain how the output is obtained."
-                        rows={3}
-                      />
-                    </Field>
+                    <RichTextEditor
+                      label="Explanation"
+                      hint="Shown as a collapsible section on the problem page."
+                      value={example.explanation}
+                      onChange={(value) =>
+                        updateListItem("examples", index, "explanation", value)
+                      }
+                      placeholder={"Explain how the output is obtained.\n\n- Key step one\n- Key step two"}
+                      rows={5}
+                    />
                   </article>
                 ))}
               </div>
@@ -671,7 +787,7 @@ function ProblemEditorModal({ problem, onClose, onSaved }) {
                     <Check size={16} />
                     <div>
                       <strong>{label}</strong>
-                      <p>{value || "Missing"}</p>
+                      {value ? <ProblemText text={value} /> : <p>Missing</p>}
                     </div>
                   </article>
                 ))}

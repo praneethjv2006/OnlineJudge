@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAppContext } from "../App";
 import { 
@@ -72,6 +72,42 @@ const fs = require("fs");
 `,
 };
 
+const hasFunctionScaffold = (problem, language) =>
+  Boolean(
+    problem?.isFunctionMode &&
+      problem?.codeTemplates?.[language] &&
+      problem?.driverCode?.[language]
+  );
+
+const formatCompactStarterCode = (source, language) => {
+  if (!source || !["cpp", "c", "javascript"].includes(language)) return source;
+  if (source.includes("\n")) return source;
+
+  let indent = 0;
+  return source
+    .replace(/\{\s*/g, "{\n")
+    .replace(/;\s*/g, ";\n")
+    .replace(/\}\s*/g, "\n}\n")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      if (line.startsWith("}")) indent = Math.max(indent - 1, 0);
+      const padded = `${"    ".repeat(indent)}${line}`;
+      if (line.endsWith("{")) indent += 1;
+      return padded;
+    })
+    .join("\n");
+};
+
+const getStarterCode = (problem, language, useFunctionMode) => {
+  if (useFunctionMode && hasFunctionScaffold(problem, language)) {
+    return formatCompactStarterCode(problem.codeTemplates[language], language);
+  }
+
+  return DEFAULT_CODE_TEMPLATES[language] || DEFAULT_CODE_TEMPLATES.cpp;
+};
+
 function ProblemSolvingPage() {
   const { problemId } = useParams();
   const navigate = useNavigate();
@@ -105,6 +141,19 @@ function ProblemSolvingPage() {
   const [analysisType, setAnalysisType] = useState(null);
   const analyzeRef = useRef(null);
 
+  // New state for mode toggle, accordions, and interview poll
+  const [isFunctionMode, setIsFunctionMode] = useState(false);
+  const [expandedAccordions, setExpandedAccordions] = useState({
+    limits: false,
+    topics: false,
+    interview: false,
+    stats: false,
+  });
+  const [interviewPoll, setInterviewPoll] = useState(() => {
+    const saved = localStorage.getItem(`poll-${problemId}`);
+    return saved ? JSON.parse(saved) : null;
+  });
+
   const fetchSubmissions = useCallback(async () => {
     setIsSubmissionsLoading(true);
     try {
@@ -131,6 +180,7 @@ function ProblemSolvingPage() {
         const data = await getProblem(problemId);
         if (isMounted) {
           setProblem(data);
+          setIsFunctionMode(hasFunctionScaffold(data, language));
         }
       } catch {
         if (isMounted) setError("Failed to load problem.");
@@ -141,6 +191,11 @@ function ProblemSolvingPage() {
     fetchProblem();
     return () => { isMounted = false; };
   }, [problemId]);
+
+  const canUseFunctionMode = useMemo(
+    () => hasFunctionScaffold(problem, language),
+    [problem, language]
+  );
 
   useEffect(() => {
     const handleMouseMove = (e) => {
@@ -173,8 +228,30 @@ function ProblemSolvingPage() {
   };
 
   useEffect(() => {
-    setCode(DEFAULT_CODE_TEMPLATES[language] || DEFAULT_CODE_TEMPLATES.cpp);
-  }, [language]);
+    if (!problem) return;
+
+    if (isFunctionMode && !canUseFunctionMode) {
+      setIsFunctionMode(false);
+      return;
+    }
+
+    setCode(getStarterCode(problem, language, isFunctionMode));
+  }, [language, isFunctionMode, canUseFunctionMode, problem]);
+
+  // Update interview poll
+  const handleInterviewPoll = (answer) => {
+    const newPoll = { answer, timestamp: new Date().toISOString() };
+    setInterviewPoll(newPoll);
+    localStorage.setItem(`poll-${problemId}`, JSON.stringify(newPoll));
+  };
+
+  // Toggle accordion
+  const toggleAccordion = (key) => {
+    setExpandedAccordions(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
+  };
 
   const handleRunTestCases = async () => {
     if (!problem) return;
@@ -202,12 +279,20 @@ function ProblemSolvingPage() {
         code,
         language,
         isSubmit: false,
-        customTestCases: customTestCases.length > 0 ? customTestCases : undefined
+        customTestCases: customTestCases.length > 0 ? customTestCases : undefined,
+        isFunctionMode: isFunctionMode && canUseFunctionMode
       });
       setRunResults(data.results || []);
       const newStatuses = {};
       (data.results || []).forEach((res, idx) => {
-        newStatuses[idx] = { status: res.verdict === 'Accepted' ? 'passed' : 'failed' };
+        newStatuses[idx] = {
+          status:
+            res.verdict === 'Accepted'
+              ? 'passed'
+              : res.verdict === 'Executed'
+                ? 'neutral'
+                : 'failed'
+        };
       });
       setTestCaseStatuses(newStatuses);
     } catch (err) {
@@ -228,6 +313,7 @@ function ProblemSolvingPage() {
         code,
         language,
         isSubmit: true,
+        isFunctionMode: isFunctionMode && canUseFunctionMode
       });
       setRunResults(data.results || []);
       const newStatuses = {};
@@ -495,7 +581,7 @@ function ProblemSolvingPage() {
             <button
               className="modal-btn modal-btn-danger"
               onClick={() => {
-                setCode(DEFAULT_CODE_TEMPLATES[language] || DEFAULT_CODE_TEMPLATES.cpp);
+                setCode(getStarterCode(problem, language, isFunctionMode && canUseFunctionMode));
                 setIsConfirmResetOpen(false);
                 toast.success("Code reset to default template.");
               }}
@@ -505,7 +591,7 @@ function ProblemSolvingPage() {
           </>
         }
       >
-        <p>Are you sure you want to reset your code to the default template? Your current changes will be lost.</p>
+        <p>Are you sure you want to reset your code to the current starter template? Your current changes will be lost.</p>
       </Modal>
 
       <main className="workspace-main">
@@ -526,43 +612,21 @@ function ProblemSolvingPage() {
                 <div className="problem-statement-container">
                   <div className="problem-statement-scroll">
 
-                    {/* Header */}
+                    {/* Header - Clean Version */}
                     <div className="problem-display-header">
                       <div className="problem-display-kicker">
                         Practice problem
                         {problem.createdBy?.name && <span>by {problem.createdBy.name}</span>}
                       </div>
-                      <h1 className="problem-display-title">{problem.title}</h1>
-                      <div className="problem-display-meta">
+                      <div className="problem-header-top">
+                        <h1 className="problem-display-title">{problem.title}</h1>
                         <span className={`problem-display-difficulty ${problem.difficulty}`}>
                           {problem.difficulty}
                         </span>
-                        <span className="problem-display-stat">
-                          <Clock size={14} /> <span><small>Time limit</small>{problem.timeLimit || 2000} ms</span>
-                        </span>
-                        <span className="problem-display-stat">
-                          <Terminal size={14} /> <span><small>Memory limit</small>{problem.memoryLimit || 256} MB</span>
-                        </span>
-                        {problem.timeComplexity && (
-                          <span className="problem-display-stat">
-                            <Info size={14} /> <span><small>Expected time</small>{problem.timeComplexity}</span>
-                          </span>
-                        )}
-                        {problem.spaceComplexity && (
-                          <span className="problem-display-stat">
-                            <Code2 size={14} /> <span><small>Expected space</small>{problem.spaceComplexity}</span>
-                          </span>
-                        )}
                       </div>
-
-                      {/* Tags */}
-                      {problem.tags && problem.tags.length > 0 && (
-                        <div className="problem-tags-container">
-                          {problem.tags.map((tag, i) => (
-                            <span key={i} className="problem-tag">{tag}</span>
-                          ))}
-                        </div>
-                      )}
+                      <p className="problem-display-subtitle">
+                        Read the statement, spot the pattern, and push the cleanest accepted solution you can.
+                      </p>
                     </div>
 
                     <div className="problem-document">
@@ -640,10 +704,12 @@ function ProblemSolvingPage() {
                                     </div>
                                   </div>
                                   {ex.explanation && (
-                                    <div className="example-explanation">
-                                      <strong>Explanation</strong>
-                                      <ProblemText text={ex.explanation} />
-                                    </div>
+                                    <details className="example-explanation-dropdown">
+                                      <summary>Explanation</summary>
+                                      <div className="example-explanation">
+                                        <ProblemText text={ex.explanation} />
+                                      </div>
+                                    </details>
                                   )}
                                 </div>
                               </div>
@@ -662,6 +728,157 @@ function ProblemSolvingPage() {
                           </div>
                         </section>
                       )}
+
+                      {/* Accordions Section */}
+                      <div className="problem-accordions-section">
+                        
+                        {/* Complexity & Limits Accordion */}
+                        <div className="accordion-item">
+                          <button 
+                            className={`accordion-button ${expandedAccordions['limits'] ? 'expanded' : ''}`}
+                            onClick={() => toggleAccordion('limits')}
+                          >
+                            <span><Clock size={15} /> Complexity & Limits</span>
+                            <ChevronDown size={16} style={{ transform: expandedAccordions['limits'] ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.2s' }} />
+                          </button>
+                          {expandedAccordions['limits'] && (
+                            <div className="accordion-content">
+                              <div className="accordion-grid">
+                                <div className="accordion-item-box">
+                                  <label>Time Limit</label>
+                                  <span className="accordion-value">{problem.timeLimit || 2000} ms</span>
+                                </div>
+                                <div className="accordion-item-box">
+                                  <label>Memory Limit</label>
+                                  <span className="accordion-value">{problem.memoryLimit || 256} MB</span>
+                                </div>
+                                {problem.timeComplexity && (
+                                  <div className="accordion-item-box">
+                                    <label>Expected Time Complexity</label>
+                                    <span className="accordion-value">{problem.timeComplexity}</span>
+                                  </div>
+                                )}
+                                {problem.spaceComplexity && (
+                                  <div className="accordion-item-box">
+                                    <label>Expected Space Complexity</label>
+                                    <span className="accordion-value">{problem.spaceComplexity}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Topics & Tags Accordion */}
+                        {(problem.topics?.length > 0 || problem.tags?.length > 0) && (
+                          <div className="accordion-item">
+                            <button 
+                              className={`accordion-button ${expandedAccordions['topics'] ? 'expanded' : ''}`}
+                              onClick={() => toggleAccordion('topics')}
+                            >
+                              <span><Code2 size={15} /> Topics & Tags</span>
+                              <ChevronDown size={16} style={{ transform: expandedAccordions['topics'] ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.2s' }} />
+                            </button>
+                            {expandedAccordions['topics'] && (
+                              <div className="accordion-content">
+                                {problem.topics?.length > 0 && (
+                                  <div className="accordion-tags-group">
+                                    <label>Topics</label>
+                                    <div className="tags-container">
+                                      {problem.topics.map((topic, i) => (
+                                        <span key={i} className="tag-badge topic-badge">{topic}</span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                                {problem.tags?.length > 0 && (
+                                  <div className="accordion-tags-group">
+                                    <label>Tags</label>
+                                    <div className="tags-container">
+                                      {problem.tags.map((tag, i) => (
+                                        <span key={i} className="tag-badge skill-badge">{tag}</span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Interview Poll Accordion */}
+                        <div className="accordion-item">
+                          <button 
+                            className={`accordion-button ${expandedAccordions['interview'] ? 'expanded' : ''}`}
+                            onClick={() => toggleAccordion('interview')}
+                          >
+                            <span><Info size={15} /> Interview Experience</span>
+                            <ChevronDown size={16} style={{ transform: expandedAccordions['interview'] ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.2s' }} />
+                          </button>
+                          {expandedAccordions['interview'] && (
+                            <div className="accordion-content">
+                              <div className="interview-poll-box">
+                                <p className="poll-question">Seen in a real interview before?</p>
+                                <div className="poll-buttons">
+                                  <button 
+                                    className={`poll-btn yes-btn ${interviewPoll?.answer === 'yes' ? 'selected' : ''}`}
+                                    onClick={() => handleInterviewPoll('yes')}
+                                  >
+                                    Yes
+                                  </button>
+                                  <button 
+                                    className={`poll-btn no-btn ${interviewPoll?.answer === 'no' ? 'selected' : ''}`}
+                                    onClick={() => handleInterviewPoll('no')}
+                                  >
+                                    No
+                                  </button>
+                                </div>
+                                <div className="poll-stats">
+                                  <div className="stat-bar">
+                                    <div className="stat-bar-segment yes-segment" style={{ width: '72%' }}>
+                                      <span>72% Yes</span>
+                                    </div>
+                                    <div className="stat-bar-segment no-segment" style={{ width: '28%' }}>
+                                      <span>28% No</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Difficulty & Acceptance Stats */}
+                        <div className="accordion-item">
+                          <button 
+                            className={`accordion-button ${expandedAccordions['stats'] ? 'expanded' : ''}`}
+                            onClick={() => toggleAccordion('stats')}
+                          >
+                            <span><CheckCircle2 size={15} /> Statistics</span>
+                            <ChevronDown size={16} style={{ transform: expandedAccordions['stats'] ? 'rotate(0deg)' : 'rotate(-90deg)', transition: 'transform 0.2s' }} />
+                          </button>
+                          {expandedAccordions['stats'] && (
+                            <div className="accordion-content">
+                              <div className="stats-cards">
+                                <div className="stat-card">
+                                  <label>Difficulty</label>
+                                  <div className="difficulty-badge-large" data-difficulty={problem.difficulty}>
+                                    {problem.difficulty.charAt(0).toUpperCase() + problem.difficulty.slice(1)}
+                                  </div>
+                                </div>
+                                <div className="stat-card">
+                                  <label>Acceptance Rate</label>
+                                  <div className="acceptance-rate">
+                                    <span className="rate-number">
+                                      {problem.difficulty === 'easy' ? '42%' : problem.difficulty === 'medium' ? '28%' : '12%'}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
 
                   </div>
@@ -701,11 +918,21 @@ function ProblemSolvingPage() {
           <div className="leetcode-right-panel">
             <div className="editor-container">
               <div className="editor-toolbar-clean">
-                <div className="lang-picker">
-                  <Code2 size={14} color="var(--accent)" />
-                  <select value={language} onChange={(e) => setLanguage(e.target.value)}>
-                    {LANGUAGE_OPTIONS.map(opt => <option key={opt.id} value={opt.id}>{opt.label}</option>)}
-                  </select>
+                <div className="toolbar-left">
+                  <div className="lang-picker">
+                    <Code2 size={14} color="var(--accent)" />
+                    <select value={language} onChange={(e) => setLanguage(e.target.value)}>
+                      {LANGUAGE_OPTIONS.map(opt => <option key={opt.id} value={opt.id}>{opt.label}</option>)}
+                    </select>
+                  </div>
+                  {problem.isFunctionMode && (
+                    <div className="mode-selector">
+                      <select value={isFunctionMode && canUseFunctionMode ? 'function' : 'io'} onChange={(e) => setIsFunctionMode(e.target.value === 'function')} disabled={!canUseFunctionMode}>
+                        {canUseFunctionMode && <option value="function">Complete the Function</option>}
+                        <option value="io">Standard I/O</option>
+                      </select>
+                    </div>
+                  )}
                 </div>
                 <button className="reset-btn" onClick={() => setIsConfirmResetOpen(true)} title="Reset Code">
                   <RotateCcw size={14} />
@@ -718,7 +945,20 @@ function ProblemSolvingPage() {
                   theme="vs-dark"
                   value={code}
                   onChange={setCode}
-                  options={{ fontSize: 14, minimap: { enabled: false }, scrollBeyondLastLine: false, automaticLayout: true }}
+                  options={{
+                    fontSize: 14,
+                    lineHeight: 22,
+                    tabSize: 4,
+                    insertSpaces: true,
+                    detectIndentation: false,
+                    formatOnPaste: true,
+                    formatOnType: true,
+                    minimap: { enabled: false },
+                    scrollBeyondLastLine: false,
+                    automaticLayout: true,
+                    wordWrap: "off",
+                    renderLineHighlight: "line",
+                  }}
                 />
               </div>
             </div>
@@ -794,7 +1034,7 @@ function ProblemSolvingPage() {
                               className="custom-tc-textarea"
                               value={customExpected}
                               onChange={(e) => setCustomExpected(e.target.value)}
-                              placeholder="Enter expected output to verify against..."
+                              placeholder="Leave empty to just run and inspect your output..."
                               rows={4}
                             />
                           </div>
@@ -834,10 +1074,12 @@ function ProblemSolvingPage() {
                               <div className="verdict-line">
                                 {runResults[selectedTestCase].verdict === 'Accepted' ? (
                                   <CheckCircle2 size={16} color="var(--success)" />
+                                ) : runResults[selectedTestCase].verdict === 'Executed' ? (
+                                  <Terminal size={16} color="var(--accent)" />
                                 ) : (
                                   <XCircle size={16} color="var(--danger)" />
                                 )}
-                                <span className={runResults[selectedTestCase].verdict === 'Accepted' ? 'pass' : 'fail'}>
+                                <span className={runResults[selectedTestCase].verdict === 'Accepted' ? 'pass' : runResults[selectedTestCase].verdict === 'Executed' ? 'neutral' : 'fail'}>
                                   {runResults[selectedTestCase].verdict}
                                 </span>
                               </div>

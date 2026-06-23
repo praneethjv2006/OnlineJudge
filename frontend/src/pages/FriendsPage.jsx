@@ -336,7 +336,8 @@ function FriendsPage() {
   const displayUsers = searchQuery.trim().length >= 2 ? searchResults : suggestions;
 
   return (
-    <div className="friends-page-layout">
+    <>
+      <div className="friends-page-layout">
       {/* Header */}
       <div className="friends-page-header">
         <div>
@@ -568,7 +569,7 @@ function FriendsPage() {
         }}
       />
     )}
-  </>;
+  </>);
 }
 
 export default FriendsPage;

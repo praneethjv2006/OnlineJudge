@@ -63,6 +63,9 @@ const normalizeProblemInput = (body = {}) => {
     topics: topics.map((t) => cleanText(String(t))).filter(Boolean),
     examples,
     testCases,
+    codeTemplates: body.codeTemplates || {},
+    driverCode: body.driverCode || {},
+    isFunctionMode: body.isFunctionMode === undefined ? false : Boolean(body.isFunctionMode),
   };
 };
 
@@ -163,12 +166,102 @@ const updateProblem = async (req, res) => {
   }
 };
 
+const generateTemplatesAndDriversWithAI = async (problem) => {
+  try {
+    const groq = new Groq({
+      apiKey: process.env.GROQ_API_KEY
+    });
+
+    const sampleCase = problem.testCases?.[0] || { input: "", expectedOutput: "" };
+
+    const prompt = `You are an expert competitive programming assistant. Your task is to generate:
+1. "template": Starter code signature for the user to complete.
+2. "driver": Wrapper code that reads input from stdin, parses it, calls the user's solution, and prints output to stdout.
+
+The user's code will be combined with the driver code (user code placed first, followed by driver code) and executed.
+Generate templates and drivers for four languages: cpp, c, python, javascript.
+
+Instructions per language:
+- **cpp**:
+  - Template: A class named \`Solution\` with a public member function.
+  - Driver: An \`int main()\` function that reads standard input (formatted as in the problem description), instantiates \`Solution\`, calls the function, and prints the result to \`cout\`.
+- **c**:
+  - Template: A standalone function (e.g. \`int solve(...)\`).
+  - Driver: An \`int main()\` function that reads standard input, calls the function, and prints the result using \`printf\`.
+- **python**:
+  - Template: A class named \`Solution\` with a method.
+  - Driver: Code under \`if __name__ == "__main__":\` that reads from \`sys.stdin\`, parses, instantiates \`Solution\`, calls the method, and prints using \`print\`.
+- **javascript**:
+  - Template: A class named \`Solution\` with a method.
+  - Driver: Code that reads from stdin (e.g., using \`fs.readFileSync(0, "utf-8")\`), parses, instantiates \`Solution\`, calls the method, and prints using \`console.log\`.
+
+Problem Details:
+Title: ${problem.title}
+Difficulty: ${problem.difficulty}
+Statement: ${problem.formalStatement || problem.statement}
+Input Format: ${problem.inputFormat}
+Output Format: ${problem.outputFormat}
+Sample Input:
+${sampleCase.input}
+Sample Output:
+${sampleCase.expectedOutput}
+
+Return ONLY a valid JSON object matching this exact schema:
+{
+  "templates": {
+    "cpp": "...",
+    "c": "...",
+    "python": "...",
+    "javascript": "..."
+  },
+  "drivers": {
+    "cpp": "...",
+    "c": "...",
+    "python": "...",
+    "javascript": "..."
+  }
+}
+Do NOT wrap the JSON in markdown code blocks. Return only the raw JSON.`;
+
+    const completion = await groq.chat.completions.create({
+      model: "llama-3.3-70b-versatile",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0,
+    });
+
+    if (completion && completion.choices?.[0]?.message?.content) {
+      let content = completion.choices[0].message.content.trim();
+      // Strip markdown code block wrappers if any
+      content = content.replace(/^```json\s*/i, "").replace(/```$/, "").trim();
+      const result = JSON.parse(content);
+      if (result.templates && result.drivers) {
+        return result;
+      }
+    }
+  } catch (error) {
+    console.error("AI Template Generation failed:", error);
+  }
+  return null;
+};
+
 const getProblem = async (req, res) => {
   try {
     const problem = await Problem.findById(req.params.id).populate("createdBy", "name email");
     if (!problem) {
       return res.status(404).json({ message: "Problem not found." });
     }
+
+    // Dynamic fetch-on-demand for code templates & drivers if missing
+    if (!problem.codeTemplates || Object.keys(problem.codeTemplates).length === 0) {
+      const generated = await generateTemplatesAndDriversWithAI(problem);
+      if (generated) {
+        problem.codeTemplates = generated.templates;
+        problem.driverCode = generated.drivers;
+        problem.isFunctionMode = true;
+        await problem.save();
+      }
+    }
+
     return res.json({ problem });
   } catch (error) {
     return res.status(500).json({ message: "Unable to load problem.", error: error.message });
@@ -187,7 +280,7 @@ const runProblemCode = async (req, res) => {
       return res.status(404).json({ message: "Problem not found." });
     }
 
-    const { code, language = "cpp", isSubmit = false, customTestCases } = req.body;
+    const { code, language = "cpp", isSubmit = false, customTestCases, isFunctionMode = false } = req.body;
 
     if (!code || !code.trim()) {
       return res.status(400).json({ message: "Code cannot be empty." });
@@ -214,7 +307,7 @@ const runProblemCode = async (req, res) => {
           input: String(tc?.input ?? "").trim(),
           expectedOutput: String(tc?.expectedOutput ?? "").trim(),
         }))
-        .filter((tc) => tc.input !== "" && tc.expectedOutput !== "");
+        .filter((tc) => tc.input !== "");
       
       if (validatedCustom.length > 0) {
         casesToRun = validatedCustom;
@@ -228,8 +321,13 @@ const runProblemCode = async (req, res) => {
       });
     }
 
+    let finalCode = code;
+    if (isFunctionMode && problem.isFunctionMode && problem.driverCode && problem.driverCode[language]) {
+      finalCode = code + "\n\n" + problem.driverCode[language];
+    }
+
     const execution = await runCodeAgainstTestCases({
-      code,
+      code: finalCode,
       language,
       testCases: casesToRun,
       timeLimitMs: problem.timeLimit || 2000,

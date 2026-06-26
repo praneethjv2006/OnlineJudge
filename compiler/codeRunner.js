@@ -55,16 +55,26 @@ const runCommand = ({ command, args, cwd, input = "", timeLimitMs }) =>
     let stderr = "";
     let timedOut = false;
     const MAX_OUTPUT_LENGTH = 1024 * 1024; // 1MB limit
+    const isWin = process.platform === "win32";
 
     const child = spawn(command, args, {
       cwd,
       shell: false,
       windowsHide: true,
+      detached: !isWin,
     });
 
     const timer = setTimeout(() => {
       timedOut = true;
-      child.kill("SIGKILL");
+      if (isWin) {
+        spawn("taskkill", ["/F", "/T", "/PID", child.pid]);
+      } else {
+        try {
+          process.kill(-child.pid, "SIGKILL");
+        } catch (err) {
+          child.kill("SIGKILL");
+        }
+      }
     }, timeLimitMs + 1000);
 
     child.stdout.on("data", (chunk) => {
@@ -241,39 +251,41 @@ const runCodeAgainstTestCases = async ({ code, language, testCases, timeLimitMs 
       };
     }
 
-    // Optimization: Run test cases in parallel
-    const executionPromises = testCases.map((testCase, index) =>
-      executeTestCase({
+    // Run test cases sequentially to prevent resource starvation (CPU overload/DDoS)
+    const results = [];
+    for (let index = 0; index < testCases.length; index++) {
+      const testCase = testCases[index];
+      const execution = await executeTestCase({
         config,
         workDir,
         input: testCase.input ?? "",
         timeLimitMs,
-      }).then((execution) => {
-        const hasExpectedOutput =
-          testCase.expectedOutput !== undefined &&
-          testCase.expectedOutput !== null &&
-          String(testCase.expectedOutput).trim() !== "";
-        let verdict = execution.verdict;
-        if (!verdict) {
-          verdict = hasExpectedOutput
-            ? compareOutput(execution.stdout, testCase.expectedOutput)
-              ? "Accepted"
-              : "Wrong Answer"
-            : "Executed";
-        }
-        return {
-          id: index + 1,
-          input: testCase.input,
-          expectedOutput: testCase.expectedOutput,
-          actualOutput: normalizeOutput(execution.stdout),
-          stderr: execution.stderr,
-          stdout: execution.stdout,
-          verdict,
-        };
-      })
-    );
+      });
 
-    const results = await Promise.all(executionPromises);
+      const hasExpectedOutput =
+        testCase.expectedOutput !== undefined &&
+        testCase.expectedOutput !== null &&
+        String(testCase.expectedOutput).trim() !== "";
+      
+      let verdict = execution.verdict;
+      if (!verdict) {
+        verdict = hasExpectedOutput
+          ? compareOutput(execution.stdout, testCase.expectedOutput)
+            ? "Accepted"
+            : "Wrong Answer"
+          : "Executed";
+      }
+
+      results.push({
+        id: index + 1,
+        input: testCase.input,
+        expectedOutput: testCase.expectedOutput,
+        actualOutput: normalizeOutput(execution.stdout),
+        stderr: execution.stderr,
+        stdout: execution.stdout,
+        verdict,
+      });
+    }
     
     // Construct terminal output
     const terminalLines = [];

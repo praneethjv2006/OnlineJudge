@@ -16,6 +16,12 @@ services:
       - "5001:5001"
     environment:
       - PORT=5001
+    pids_limit: 100
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
 
   frontend:
     build: ./frontend

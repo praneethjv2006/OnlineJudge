@@ -4,13 +4,18 @@ RUN apk add --no-cache \
     g++ \
     python3 \
     make
+
 WORKDIR /app
 
-COPY package*.json ./
+RUN chown -R node:node /app
+
+USER node
+
+COPY --chown=node:node package*.json ./
 
 RUN npm install
 
-COPY . .
+COPY --chown=node:node . .
 
 EXPOSE 5001
 

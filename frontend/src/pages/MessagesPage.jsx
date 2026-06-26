@@ -14,6 +14,7 @@ import {
 import { getMyFriends } from "../services/friendService";
 import data from "@emoji-mart/data";
 import Picker from "@emoji-mart/react";
+import Modal from "../components/common/Modal";
 
 // ─── Quick emoji set ──────────────────────────────────────────────────────────
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🔥", "🎉", "👏"];
@@ -52,9 +53,6 @@ function formatDateSeparator(date) {
 
 // ─── Message Bubble ───────────────────────────────────────────────────────────
 function MessageBubble({ message, isMe, onDelete, onReply, onReact, currentUserId }) {
-  const countdown = useCountdown(message.expiresAt);
-  const isAlmostExpired = new Date(message.expiresAt) - Date.now() < 3 * 3_600_000;
-  const isExpiringSoon = new Date(message.expiresAt) - Date.now() < 1 * 3_600_000;
   const [showReactPicker, setShowReactPicker] = useState(false);
 
   // Build reactions display from Map or Object
@@ -134,13 +132,14 @@ function MessageBubble({ message, isMe, onDelete, onReply, onReact, currentUserI
               hour: "2-digit", minute: "2-digit", hour12: false
             })}
           </span>
-          <span
-            className={`msg-ttl ${isExpiringSoon ? "msg-ttl-urgent" : isAlmostExpired ? "msg-ttl-warn" : ""}`}
-            title="This message expires automatically"
-          >
-            <Clock size={10} />
-            {countdown}
-          </span>
+          {isMe && (
+            <span
+              className={`msg-status ${message.isOptimistic ? "msg-status-sending" : "msg-status-delivered"}`}
+              title={message.isOptimistic ? "Sending..." : "Delivered"}
+            >
+              {message.isOptimistic ? "✓" : "✓✓"}
+            </span>
+          )}
         </div>
 
         {/* Hover actions */}
@@ -415,6 +414,7 @@ function MessagesPage() {
   const [isLoadingMsgs, setIsLoadingMsgs] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [showGroupModal, setShowGroupModal] = useState(false);
+  const [deleteMsgConfirmId, setDeleteMsgConfirmId] = useState(null);
   const [friends, setFriends] = useState([]);
   const [msgPage, setMsgPage] = useState(1);
   const [msgHasMore, setMsgHasMore] = useState(false);
@@ -558,34 +558,92 @@ function MessagesPage() {
   };
 
   const handleSend = async () => {
-    if (!inputText.trim() || !activeConvId || isSending) return;
-    setIsSending(true);
+    const textToSend = inputText.trim();
+    if (!textToSend || !activeConvId) return;
+
+    const tempId = `optimistic-${Date.now()}`;
+    const optimisticMsg = {
+      _id: tempId,
+      conversationId: activeConvId,
+      sender: {
+        _id: currentUserId,
+        name: user?.name || "Me",
+        email: user?.email,
+      },
+      content: textToSend,
+      type: "text",
+      language: null,
+      replyTo: replyTo
+        ? {
+            messageId: replyTo._id,
+            senderName: replyTo.sender?.name || "Unknown",
+            preview: replyTo.content?.slice(0, 100) || "",
+            type: replyTo.type || "text",
+          }
+        : null,
+      reactions: {},
+      expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000),
+      createdAt: new Date(),
+      isOptimistic: true,
+    };
+
+    // Optimistically update local message thread
+    setMessages((prev) => [...prev, optimisticMsg]);
+    setInputText("");
+    setReplyTo(null);
+
+    // Optimistically update lastMessage preview in conversations sidebar
+    setConversations((prev) =>
+      prev.map((c) =>
+        c._id === activeConvId
+          ? {
+              ...c,
+              lastMessage: {
+                content: textToSend,
+                at: new Date(),
+                sender: { _id: currentUserId },
+              },
+            }
+          : c
+      )
+    );
+    updateLastReadTime(activeConvId);
+
     try {
-      const replyToPayload = replyTo
-        ? { messageId: replyTo._id }
-        : null;
+      const replyToPayload = replyTo ? { messageId: replyTo._id } : null;
       const { message } = await sendMessage(
         activeConvId,
-        inputText.trim(),
-        inputType,
-        inputType === "code" ? codeLanguage : null,
+        textToSend,
+        "text",
+        null,
         replyToPayload
       );
-      setMessages((prev) => [...prev, message]);
-      setInputText("");
-      setReplyTo(null);
+
+      // Replace optimistic message with actual backend response
+      setMessages((prev) =>
+        prev.map((m) => (m._id === tempId ? message : m))
+      );
+
+      // Update conversations list with actual created date
       setConversations((prev) =>
         prev.map((c) =>
           c._id === activeConvId
-            ? { ...c, lastMessage: { content: inputText.trim(), at: new Date(), sender: { _id: currentUserId } } }
+            ? {
+                ...c,
+                lastMessage: {
+                  content: textToSend,
+                  at: message.createdAt,
+                  sender: { _id: currentUserId },
+                },
+              }
             : c
         )
       );
-      updateLastReadTime(activeConvId);
     } catch (err) {
       toast.error(err?.response?.data?.message || "Failed to send message.");
+      // Remove optimistic message if sending failed
+      setMessages((prev) => prev.filter((m) => m._id !== tempId));
     }
-    setIsSending(false);
   };
 
   const handleDeleteMessage = async (msgId) => {
@@ -900,7 +958,7 @@ function MessagesPage() {
                         key={item.key}
                         message={item.data}
                         isMe={String(item.data.sender?._id || item.data.sender) === String(currentUserId)}
-                        onDelete={handleDeleteMessage}
+                        onDelete={(msgId) => setDeleteMsgConfirmId(msgId)}
                         onReply={handleReply}
                         onReact={handleReact}
                         currentUserId={currentUserId}
@@ -918,73 +976,41 @@ function MessagesPage() {
                   <ReplyBar replyTo={replyTo} onCancel={() => setReplyTo(null)} />
                 )}
 
-                <div className="msg-input-toolbar">
-                  <button
-                    className={`msg-type-btn ${inputType === "text" ? "active" : ""}`}
-                    onClick={() => setInputType("text")}
-                    title="Text message"
-                  >
-                    <Hash size={15} /> Text
-                  </button>
-                  <button
-                    className={`msg-type-btn ${inputType === "code" ? "active" : ""}`}
-                    onClick={() => setInputType("code")}
-                    title="Code snippet"
-                  >
-                    <Code2 size={15} /> Code
-                  </button>
-                  {inputType === "code" && (
-                    <select
-                      className="msg-lang-select"
-                      value={codeLanguage}
-                      onChange={(e) => setCodeLanguage(e.target.value)}
-                    >
-                      <option value="cpp">C++</option>
-                      <option value="c">C</option>
-                      <option value="python">Python</option>
-                      <option value="javascript">JavaScript</option>
-                      <option value="java">Java</option>
-                    </select>
-                  )}
-                </div>
-
                 <div className="msg-input-row">
                   {/* Emoji picker button */}
-                  {inputType === "text" && (
-                    <div className="msg-emoji-wrapper" style={{ position: "relative" }}>
-                      <button
-                        className="msg-emoji-btn"
-                        onClick={() => setShowEmojiPicker((c) => !c)}
-                        title="Insert emoji"
-                        type="button"
-                      >
-                        <Smile size={18} />
-                      </button>
-                      {showEmojiPicker && (
-                        <div className="emoji-picker-container" ref={emojiPickerRef} style={{ position: "absolute", bottom: "50px", left: "0px", zIndex: 1000 }}>
-                          <Picker
-                            data={data}
-                            onEmojiSelect={(emoji) => handleEmojiSelect(emoji.native)}
-                            theme="dark"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  <div className="msg-emoji-wrapper" style={{ position: "relative" }}>
+                    <button
+                      className="msg-emoji-btn"
+                      onClick={() => setShowEmojiPicker((c) => !c)}
+                      title="Insert emoji"
+                      type="button"
+                    >
+                      <Smile size={18} />
+                    </button>
+                    {showEmojiPicker && (
+                      <div className="emoji-picker-container" ref={emojiPickerRef} style={{ position: "absolute", bottom: "50px", left: "0px", zIndex: 1000 }}>
+                        <Picker
+                          data={data}
+                          onEmojiSelect={(emoji) => handleEmojiSelect(emoji.native)}
+                          theme="dark"
+                        />
+                      </div>
+                    )}
+                  </div>
 
                   <textarea
                     ref={inputRef}
-                    className={`msg-textarea ${inputType === "code" ? "msg-textarea-code" : ""}`}
-                    placeholder={inputType === "code" ? "Paste your code snippet…" : "Type a message…"}
+                    className="msg-textarea"
+                    placeholder="Type a message…"
                     value={inputText}
                     onChange={(e) => setInputText(e.target.value)}
-                    onKeyDown={inputType === "text" ? handleKeyDown : undefined}
-                    rows={inputType === "code" ? 4 : 2}
+                    onKeyDown={handleKeyDown}
+                    rows={2}
                   />
                   <button
                     className="msg-send-btn"
                     onClick={handleSend}
-                    disabled={!inputText.trim() || isSending}
+                    disabled={!inputText.trim()}
                     title="Send (Enter)"
                   >
                     <Send size={20} />
@@ -1014,6 +1040,36 @@ function MessagesPage() {
           onCreate={handleCreateGroup}
         />
       )}
+
+      {/* Delete confirmation modal */}
+      <Modal
+        isOpen={!!deleteMsgConfirmId}
+        onClose={() => setDeleteMsgConfirmId(null)}
+        title="Delete Message"
+        footer={
+          <>
+            <button
+              className="modal-btn modal-btn-cancel"
+              onClick={() => setDeleteMsgConfirmId(null)}
+            >
+              Cancel
+            </button>
+            <button
+              className="modal-btn modal-btn-danger"
+              onClick={async () => {
+                if (deleteMsgConfirmId) {
+                  await handleDeleteMessage(deleteMsgConfirmId);
+                  setDeleteMsgConfirmId(null);
+                }
+              }}
+            >
+              Delete
+            </button>
+          </>
+        }
+      >
+        <p>Are you sure you want to delete this message? This action cannot be undone.</p>
+      </Modal>
     </div>
   );
 }

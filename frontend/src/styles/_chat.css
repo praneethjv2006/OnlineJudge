@@ -703,3 +703,254 @@
   background: rgba(255, 161, 22, 0.12);
 }
 
+/* ─── Friends Chat UI Enhancements (Theme Alignment & Layout Adjustment) ─── */
+
+.msg-bubble-wrapper {
+  position: relative;
+}
+
+.msg-bubble-col {
+  position: relative;
+}
+
+/* Hover actions container - styled modernly, positioned next to the message bubble */
+.msg-hover-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  padding: 4px 6px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  z-index: 10;
+}
+
+/* Float positioning relative to alignment */
+.msg-bubble-wrapper.msg-mine .msg-hover-actions {
+  left: -100px;
+}
+
+.msg-bubble-wrapper.msg-theirs .msg-hover-actions {
+  right: -100px;
+}
+
+/* Display hover actions on bubble container hover */
+.msg-bubble-wrapper:hover .msg-hover-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Glassmorphic small action buttons inside the hover container */
+.msg-action-btn {
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.msg-action-btn:hover {
+  color: var(--color-text-primary);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.msg-action-btn.msg-action-reacted {
+  color: var(--color-accent);
+  background: rgba(255, 161, 22, 0.12);
+}
+
+.msg-action-btn.msg-action-delete:hover {
+  color: var(--color-danger, #ef4444);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+/* Quick emoji picker strip float menu */
+.msg-quick-react-wrapper {
+  position: relative;
+}
+
+.msg-quick-react-strip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--color-surface-1);
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  padding: 4px 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  position: absolute;
+  bottom: 34px;
+  z-index: 25;
+  animation: slideUp 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.msg-quick-react-strip.strip-left {
+  right: 0;
+}
+
+.msg-quick-react-strip.strip-right {
+  left: 0;
+}
+
+.msg-quick-react-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.15rem;
+  cursor: pointer;
+  padding: 2px;
+  transition: transform 0.1s ease;
+}
+
+.msg-quick-react-btn:hover {
+  transform: scale(1.3);
+}
+
+/* Reactions row positioning under bubbles */
+.msg-reactions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+  align-self: flex-start;
+}
+
+.msg-mine .msg-reactions-row {
+  align-self: flex-end;
+}
+
+/* Discord/WhatsApp style reactions badge */
+.msg-reaction-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  color: var(--color-text-primary);
+}
+
+.msg-reaction-chip:hover {
+  border-color: var(--color-accent);
+  background: rgba(255, 161, 22, 0.05);
+}
+
+.msg-reaction-chip.msg-reaction-mine {
+  background: rgba(255, 161, 22, 0.08);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  box-shadow: 0 2px 6px rgba(255, 161, 22, 0.1);
+}
+
+.msg-reaction-chip span {
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+/* Quoted Reply inside message bubbles */
+.msg-reply-quote {
+  display: flex;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  margin-bottom: 6px;
+  overflow: hidden;
+  max-width: 100%;
+}
+
+.msg-reply-bar {
+  width: 3px;
+  background: var(--color-accent);
+  flex-shrink: 0;
+}
+
+.msg-reply-content {
+  padding: 6px 10px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.msg-reply-sender {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--color-accent);
+}
+
+.msg-reply-preview {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+/* Chat toolbar emoji trigger button styling */
+.msg-emoji-btn {
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.msg-emoji-btn:hover {
+  color: var(--color-accent);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.msg-thread-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.msg-status {
+  font-size: 0.85rem;
+  margin-left: 4px;
+  line-height: 1;
+}
+
+.msg-status-sending {
+  color: var(--color-text-muted);
+}
+
+.msg-status-delivered {
+  color: #3b82f6;
+}
+
+

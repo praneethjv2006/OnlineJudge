@@ -31,6 +31,7 @@ const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:3000",
   "https://onlinejudge-xtob.onrender.com",
+  "https://onlinejudge-5dc.pages.dev",
 ].filter(Boolean);
 
 app.use(

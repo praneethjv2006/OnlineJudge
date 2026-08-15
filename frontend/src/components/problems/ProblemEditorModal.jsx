@@ -374,7 +374,7 @@ function ProblemEditorModal({ problem, onClose, onSaved }) {
       const serverMessage = error.response?.data?.message;
       const message =
         error.response?.status === 404 && !serverMessage
-          ? "The deployed backend does not support problem editing yet. Redeploy Railway first."
+          ? "The deployed backend does not support problem editing yet. Redeploy Render first."
           : serverMessage || "Unable to save the problem.";
       toast.error(message);
     } finally {

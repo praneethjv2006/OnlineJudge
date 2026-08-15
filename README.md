@@ -134,4 +134,4 @@ Frontend changes and backend routes must both be deployed. The deployed API heal
 }
 ```
 
-If create, edit, or delete works locally but returns `404` in production, redeploy the Railway backend from the latest `main` commit.
+If create, edit, or delete works locally but returns `404` in production, redeploy the Render backend from the latest `main` commit.

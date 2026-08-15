@@ -121,7 +121,7 @@ function ProblemsPage() {
   const openCreateEditor = () => {
     if (!user) { toast.info("Sign in to publish a problem."); navigate("/auth"); return; }
     if (apiFeatures && !apiFeatures.structuredProblems) {
-      toast.error("Railway is still running the old backend. Redeploy the latest main commit first.");
+      toast.error("Render is still running the old backend. Redeploy the latest main commit first.");
       return;
     }
     setEditorState({ problem: null });
@@ -129,7 +129,7 @@ function ProblemsPage() {
 
   const openEditEditor = (problem) => {
     if (apiFeatures && !apiFeatures.problemEdit) {
-      toast.error("Railway is still running the old backend. Redeploy the latest main commit first.");
+      toast.error("Render is still running the old backend. Redeploy the latest main commit first.");
       return;
     }
     setEditorState({ problem });
@@ -157,7 +157,7 @@ function ProblemsPage() {
       const serverMessage = error.response?.data?.message;
       const message =
         error.response?.status === 404 && !serverMessage
-          ? "The deployed backend does not have the delete route yet. Redeploy Railway and try again."
+          ? "The deployed backend does not have the delete route yet. Redeploy Render and try again."
           : serverMessage || "Failed to delete problem.";
       toast.error(message);
     } finally {
@@ -269,7 +269,7 @@ function ProblemsPage() {
             <AlertTriangle size={18} />
             <div>
               <strong>Backend deployment is outdated</strong>
-              <p>Create, edit, and delete require the latest Railway backend deployment.</p>
+              <p>Create, edit, and delete require the latest Render backend deployment.</p>
             </div>
           </div>
         )}

@@ -26,27 +26,12 @@ app.use((req, res, next) => {
   next();
 });
 
-const allowedOrigins = [
-  process.env.CLIENT_URL,
-  "http://localhost:5173",
-  "http://localhost:3000",
-  "https://onlinejudge-xtob.onrender.com",
-  "https://onlinejudge-5dc.pages.dev",
-].filter(Boolean);
-
+// Allow all origins (public API) while still supporting credentials
 app.use(
   cors({
     origin: (origin, callback) => {
-      const isAllowed =
-        !origin ||
-        allowedOrigins.includes(origin) ||
-        /^https:\/\/[a-zA-Z0-9-]+\.onlinejudge-5dc\.pages\.dev$/.test(origin);
-
-      if (isAllowed) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
+      // Unconditionally allow the incoming origin
+      callback(null, true);
     },
     credentials: true,
   })

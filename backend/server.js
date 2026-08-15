@@ -4,6 +4,7 @@ const dotenv = require("dotenv");
 const cookieParser = require("cookie-parser");
 
 const connectDB = require("./config/db");
+const { createCorsOptions } = require("./config/cors");
 const authRoutes = require("./routes/authRoutes");
 const contestRoutes = require("./routes/contestRoutes");
 const problemRoutes = require("./routes/problemRoutes");
@@ -26,16 +27,9 @@ app.use((req, res, next) => {
   next();
 });
 
-// Allow all origins (public API) while still supporting credentials
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Unconditionally allow the incoming origin
-      callback(null, true);
-    },
-    credentials: true,
-  })
-);
+// Browsers may only send credentialed requests from configured frontend origins.
+// Set CLIENT_URL (one origin) or CLIENT_URLS (comma-separated origins) in Render.
+app.use(cors(createCorsOptions()));
 app.use(express.json());
 app.use(cookieParser());
 

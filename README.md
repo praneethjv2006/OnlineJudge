@@ -30,6 +30,40 @@ The frontend uses `VITE_API_URL` from `frontend/.env`. For local development:
 VITE_API_URL=http://localhost:5000/api
 ```
 
+## Render backend and CORS
+
+The backend only accepts credentialed browser requests from the frontend origins
+configured in `CLIENT_URL` or `CLIENT_URLS`; it does not use `*` with cookies.
+Set these environment variables in the **Render backend service**:
+
+```env
+NODE_ENV=production
+CLIENT_URL=https://your-frontend-domain.example
+# Or, for more than one exact frontend origin:
+# CLIENT_URLS=https://your-frontend-domain.example,https://staging.example
+JWT_ACCESS_SECRET=use_a_long_random_value
+JWT_REFRESH_SECRET=use_a_different_long_random_value
+MONGO_URI=your_production_mongodb_connection_string
+# Required if code execution is enabled: public URL of the separately deployed compiler.
+COMPILER_SERVICE_URL=https://your-compiler-service.example
+```
+
+Set this environment variable in the **frontend hosting service** and redeploy
+the frontend, because Vite injects it during the build:
+
+```env
+VITE_API_URL=https://onlinejudge-xtob.onrender.com/api
+```
+
+Use an origin only (scheme, host, and optional port): no path; a trailing slash
+is normalized. After changing Render variables, redeploy the backend. The production
+refresh cookie is `Secure` and `SameSite=None`, so both services must use HTTPS.
+
+On Render, set the backend service's **Root Directory** to `backend`, its build
+command to `npm install`, and its start command to `npm start`. `localhost:5001`
+only works on a local machine or inside Docker Compose, so it cannot be used for
+a separately deployed Render compiler service.
+
 ## How to upload a well-formatted problem
 
 Sign in, open **Problems**, and select **Create problem**. The editor has four steps.

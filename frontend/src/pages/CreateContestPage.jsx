@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { createContest } from "../services/contestService";
+import { getErrorMessage } from "../services/api";
 
 const createTestCase = () => ({
   input: "",
@@ -138,7 +139,7 @@ function CreateContestPage() {
       setCreatedContest(contest);
       setDraft(createContestDraft());
     } catch (requestError) {
-      setError(requestError.response?.data?.message || "Contest creation failed.");
+      setError(getErrorMessage(requestError, "Contest creation failed. Please check your inputs and try again."));
     } finally {
       setIsSubmitting(false);
     }

@@ -11,6 +11,7 @@ import Editor from "@monaco-editor/react";
 import Modal from "../components/common/Modal";
 import ProblemText from "../components/problems/ProblemText";
 import { toast } from "../components/common/Toast";
+import { getErrorMessage } from "../services/api";
 import { 
   FileText, 
   Code2, 
@@ -159,8 +160,8 @@ function ProblemSolvingPage() {
     try {
       const data = await getProblemSubmissions(problemId);
       setSubmissions(data.submissions || []);
-    } catch {
-      // Failed to load submissions
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Failed to load submissions."));
     } finally {
       setIsSubmissionsLoading(false);
     }
@@ -182,8 +183,8 @@ function ProblemSolvingPage() {
           setProblem(data);
           setIsFunctionMode(hasFunctionScaffold(data, language));
         }
-      } catch {
-        if (isMounted) setError("Failed to load problem.");
+      } catch (err) {
+        if (isMounted) setError(getErrorMessage(err, "Failed to load problem."));
       } finally {
         if (isMounted) setIsLoading(false);
       }
@@ -296,7 +297,7 @@ function ProblemSolvingPage() {
       });
       setTestCaseStatuses(newStatuses);
     } catch (err) {
-      toast.error(err.message || "Execution error.");
+      toast.error(getErrorMessage(err, "Code execution failed. Please try again."));
     } finally {
       setIsRunning(false);
     }
@@ -331,7 +332,7 @@ function ProblemSolvingPage() {
       }
       fetchSubmissions();
     } catch (err) {
-      toast.error(err.message || "Submission failed.");
+      toast.error(getErrorMessage(err, "Submission failed. Please try again."));
     } finally {
       setIsSubmitting(false);
     }
@@ -359,8 +360,8 @@ function ProblemSolvingPage() {
         problemId 
       });
       setAnalysisResult(data.result);
-    } catch {
-      setAnalysisResult("Failed to analyze code. Please try again.");
+    } catch (err) {
+      setAnalysisResult(getErrorMessage(err, "Failed to analyze code. Please try again."));
     } finally {
       setIsAnalyzing(false);
     }

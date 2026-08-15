@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { useAppContext } from "../App";
 import { toast } from "../components/common/Toast";
+import { getErrorMessage } from "../services/api";
 import {
   searchUsers, sendFriendRequest, acceptFriendRequest, rejectFriendRequest,
   cancelFriendRequest, unfriend, getMyFriends, getIncomingRequests,
@@ -73,7 +74,7 @@ function FriendCard({ user, onMessage, onViewProfile, onUnfriend }) {
 
   const wrap = async (key, fn) => {
     setLoading(key);
-    try { await fn(); } catch (e) { toast.error(e?.response?.data?.message || "Error."); }
+    try { await fn(); } catch (e) { toast.error(getErrorMessage(e, "Error.")); }
     finally { setLoading(null); }
   };
 
@@ -332,7 +333,7 @@ function FriendsPage() {
         updateFriend((list) => list.map((x) => x._id === u._id ? { ...x, friendship: null } : x));
       }
     } catch (e) {
-      toast.error(e?.response?.data?.message || "Action failed.");
+      toast.error(getErrorMessage(e, "Action failed."));
     }
   };
 
@@ -342,7 +343,7 @@ function FriendsPage() {
       const { conversation } = await openDirectChat(friendId);
       navigate("/messages", { state: { conversationId: conversation._id } });
     } catch (e) {
-      toast.error(e?.response?.data?.message || "Could not open chat.");
+      toast.error(getErrorMessage(e, "Could not open chat."));
     }
   };
 
@@ -353,23 +354,35 @@ function FriendsPage() {
       toast.success("Removed from friends.");
       setFriends((p) => p.filter((f) => f._id !== friendId));
     } catch (e) {
-      toast.error(e?.response?.data?.message || "Failed to unfriend.");
+      toast.error(getErrorMessage(e, "Failed to unfriend."));
     }
   };
 
   // ─── Request tab actions ─────────────────────────────────────────────────────
   const handleAccept = async (id) => {
-    await acceptFriendRequest(id);
-    toast.success("Friend request accepted!");
-    setIncomingRequests((p) => p.filter((r) => r._id !== id));
+    try {
+      await acceptFriendRequest(id);
+      toast.success("Friend request accepted!");
+      setIncomingRequests((p) => p.filter((r) => r._id !== id));
+    } catch (e) {
+      toast.error(getErrorMessage(e, "Failed to accept friend request."));
+    }
   };
   const handleReject = async (id) => {
-    await rejectFriendRequest(id);
-    setIncomingRequests((p) => p.filter((r) => r._id !== id));
+    try {
+      await rejectFriendRequest(id);
+      setIncomingRequests((p) => p.filter((r) => r._id !== id));
+    } catch (e) {
+      toast.error(getErrorMessage(e, "Failed to reject friend request."));
+    }
   };
   const handleCancel = async (id) => {
-    await cancelFriendRequest(id);
-    setSentRequests((p) => p.filter((r) => r._id !== id));
+    try {
+      await cancelFriendRequest(id);
+      setSentRequests((p) => p.filter((r) => r._id !== id));
+    } catch (e) {
+      toast.error(getErrorMessage(e, "Failed to cancel friend request."));
+    }
   };
 
   const displayUsers = searchQuery.trim().length >= 2 ? searchResults : suggestions;

@@ -12,6 +12,7 @@ import { analyzeCode } from "../services/problemService";
 import Editor from "@monaco-editor/react";
 import Modal from "../components/common/Modal";
 import { toast } from "../components/common/Toast";
+import { getErrorMessage } from "../services/api";
 import { 
   FileText, 
   Code2, 
@@ -128,8 +129,8 @@ function ContestRoomPage() {
     try {
       const data = await getContestSubmissions(contestId);
       setSubmissions(data.submissions || []);
-    } catch {
-      // Failed to load submissions
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Failed to load submissions."));
     } finally {
       setIsSubmissionsLoading(false);
     }
@@ -151,8 +152,8 @@ function ContestRoomPage() {
           setContest(data.contest);
           setSelectedQuestionIndex(0);
         }
-      } catch {
-        if (isMounted) setError("Failed to load contest.");
+      } catch (err) {
+        if (isMounted) setError(getErrorMessage(err, "Failed to load contest."));
       } finally {
         if (isMounted) setIsLoading(false);
       }
@@ -230,7 +231,7 @@ function ContestRoomPage() {
       });
       setTestCaseStatuses(newStatuses);
     } catch (err) {
-      toast.error(err.message || "Execution error.");
+      toast.error(getErrorMessage(err, "Code execution failed. Please try again."));
     } finally {
       setIsRunning(false);
     }
@@ -261,7 +262,7 @@ function ContestRoomPage() {
       }
       fetchSubmissions();
     } catch (err) {
-      toast.error(err.message || "Submission failed.");
+      toast.error(getErrorMessage(err, "Submission failed. Please try again."));
     } finally {
       setIsSubmitting(false);
     }
@@ -281,7 +282,7 @@ function ContestRoomPage() {
       });
       setAnalysisResult(data.result);
     } catch (err) {
-      setAnalysisResult("Failed to analyze code. Please try again.");
+      setAnalysisResult(getErrorMessage(err, "Failed to analyze code. Please try again."));
     } finally {
       setIsAnalyzing(false);
     }
@@ -385,8 +386,8 @@ function ContestRoomPage() {
       const data = await startContest(contestId);
       setContest(data.contest);
       toast.success("Contest started!");
-    } catch {
-      toast.error("Failed to start contest.");
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Failed to start contest."));
     }
   };
 
@@ -400,8 +401,8 @@ function ContestRoomPage() {
       const data = await endContest(contestId);
       setContest(data.contest);
       toast.success("Contest ended!");
-    } catch {
-      toast.error("Failed to end contest.");
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Failed to end contest."));
     }
   };
 

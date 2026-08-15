@@ -98,4 +98,38 @@ api.interceptors.response.use(
   }
 );
 
+/**
+ * Extract a user-friendly error message from an axios error.
+ * Prefers the backend's `message` field, then falls back to
+ * descriptive messages for network / timeout / CORS errors.
+ */
+export const getErrorMessage = (error, fallback = "Something went wrong. Please try again.") => {
+  // Backend responded with an error payload
+  if (error?.response?.data?.message) {
+    return error.response.data.message;
+  }
+
+  // Network error (no response at all) — could be CORS, server down, or no internet
+  if (error?.code === "ERR_NETWORK" || error?.message === "Network Error") {
+    return "Unable to connect to the server. Please check your internet connection and try again.";
+  }
+
+  // Request timed out
+  if (error?.code === "ECONNABORTED") {
+    return "The request timed out. Please try again.";
+  }
+
+  // Rate limited (429) without a message body
+  if (error?.response?.status === 429) {
+    return "Too many requests. Please wait a moment and try again.";
+  }
+
+  // Server error (5xx) without a message body
+  if (error?.response?.status >= 500) {
+    return "A server error occurred. Please try again later.";
+  }
+
+  return fallback;
+};
+
 export default api;

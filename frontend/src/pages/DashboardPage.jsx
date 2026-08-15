@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useAppContext } from "../App";
 import { loadDashboardStats } from "../services/authService";
+import { getErrorMessage } from "../services/api";
+import { toast } from "../components/common/Toast";
 import Editor from "@monaco-editor/react";
 import { 
   Calendar, 
@@ -38,7 +40,7 @@ function DashboardPage() {
           setStats(data);
         }
       } catch (err) {
-        console.error("Failed to load dashboard stats:", err);
+        toast.error(getErrorMessage(err, "Unable to load dashboard stats. Please try again."));
       } finally {
         if (isMounted) {
           setIsLoading(false);

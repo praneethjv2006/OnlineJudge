@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAppContext } from "../App";
 import { joinContest, loadContests } from "../services/contestService";
+import { getErrorMessage } from "../services/api";
+import { toast } from "../components/common/Toast";
 import { 
   Lock, 
   Clock, 
@@ -74,8 +76,10 @@ function ContestsPage() {
         if (isMounted) {
           setContests(data.contests || []);
         }
-      } catch {
-        // Silently handle load errors for now or use another notification method
+      } catch (err) {
+        if (isMounted) {
+          toast.error(getErrorMessage(err, "Unable to load contests. Please try again."));
+        }
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -122,8 +126,8 @@ function ContestsPage() {
       if (data.contest?._id) {
         navigate(`/contests/${data.contest._id}`);
       }
-    } catch {
-      setJoinError("Unable to join the contest room.");
+    } catch (err) {
+      setJoinError(getErrorMessage(err, "Unable to join the contest room. Please check the code and try again."));
     } finally {
       setIsJoining(false);
     }
@@ -140,8 +144,8 @@ function ContestsPage() {
       setJoinMessage(data.message || "Joined contest successfully.");
       setShowJoiner(false);
       navigate(`/contests/${contestId}`);
-    } catch {
-      setJoinError("Unable to join the contest room.");
+    } catch (err) {
+      setJoinError(getErrorMessage(err, "Unable to join the contest room."));
       setShowJoiner(true);
     } finally {
       setIsJoining(false);

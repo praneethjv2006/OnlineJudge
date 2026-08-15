@@ -4,6 +4,7 @@ import LottieComponent from "lottie-react";
 const Lottie = LottieComponent?.default || LottieComponent;
 import animationData from "../../assets/animations/gif5.json";
 import { signIn, signUp } from "../../services/authService";
+import { getErrorMessage } from "../../services/api";
 
 const initialForm = {
   name: "",
@@ -37,6 +38,12 @@ function AuthPage({ onAuthenticated }) {
     setIsLoading(true);
     resetFeedback();
 
+    if (!form.email.trim() || !form.password) {
+      setError("Please enter your email and password.");
+      setIsLoading(false);
+      return;
+    }
+
     try {
       const data = await signIn({
         email: form.email,
@@ -48,7 +55,7 @@ function AuthPage({ onAuthenticated }) {
       resetForm();
     } catch (requestError) {
       resetForm();
-      setError(requestError.response?.data?.message || "Sign in failed.");
+      setError(getErrorMessage(requestError, "Sign in failed. Please check your credentials."));
     } finally {
       setIsLoading(false);
     }
@@ -58,6 +65,33 @@ function AuthPage({ onAuthenticated }) {
     event.preventDefault();
     setIsLoading(true);
     resetFeedback();
+
+    if (!form.name.trim()) {
+      setError("Please enter your full name.");
+      setIsLoading(false);
+      return;
+    }
+    if (form.name.trim().length < 2) {
+      setError("Name must be at least 2 characters long.");
+      setIsLoading(false);
+      return;
+    }
+    if (!form.email.trim()) {
+      setError("Please enter your email address.");
+      setIsLoading(false);
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(form.email)) {
+      setError("Please enter a valid email address.");
+      setIsLoading(false);
+      return;
+    }
+    if (form.password.length < 6) {
+      setError("Password must be at least 6 characters long.");
+      setIsLoading(false);
+      return;
+    }
 
     try {
       const data = await signUp({
@@ -71,7 +105,7 @@ function AuthPage({ onAuthenticated }) {
       resetForm();
     } catch (requestError) {
       resetForm();
-      setError(requestError.response?.data?.message || "Sign up failed.");
+      setError(getErrorMessage(requestError, "Account creation failed. Please try again."));
     } finally {
       setIsLoading(false);
     }

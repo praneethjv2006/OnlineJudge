@@ -4,6 +4,8 @@ import { useAppContext } from "../App";
 import LottieComponent from "lottie-react";
 const Lottie = LottieComponent?.default || LottieComponent;
 import { loadContests, joinContest } from "../services/contestService";
+import { getErrorMessage } from "../services/api";
+import { toast } from "../components/common/Toast";
 import gif3 from "../assets/animations/gif3.json";
 import { 
   Trophy, 
@@ -71,6 +73,7 @@ function HomePage() {
           setContests((data.contests || []).slice(0, 3));
         }
       } catch (err) {
+        // Non-critical — home page still loads, just without contest previews
         console.error("Failed to load public contests:", err);
       } finally {
         if (isMounted) {
@@ -92,8 +95,7 @@ function HomePage() {
       await joinContest({ contestId });
       navigate(`/contests/${contestId}`);
     } catch (err) {
-      console.error("Failed to join contest:", err);
-      // Fallback navigate to contests page if something fails
+      toast.error(getErrorMessage(err, "Could not join the contest. Please try from the Contests page."));
       navigate(`/contests`);
     } finally {
       setIsJoining(false);

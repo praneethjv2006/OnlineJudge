@@ -1,55 +1,43 @@
 #include <bits/stdc++.h>
 using namespace std;
+#define ll long long
 
-int main() {
-    ios::sync_with_stdio(false);
-    cin.tie(nullptr);
-
+int main(){
     int t;
     cin>>t;
-
     while(t--){
-        int n, k;
-        cin>>n>>k;
-
-        vector<int> a(n);
-
-        for(int i = 0; i<n; i++){
-            cin>>a[i];
+        int n;
+        cin>>n;
+        multiset<ll>mp;
+        for(int i=0;i<n;i++){
+            ll x;
+            cin>>x;
+            mp.insert(x);
         }
 
-        sort(a.begin(), a.end());
-
-        vector<pair<int,int>> v;
-
-        for(int i = 0; i<n; i++){
-
-            int j = i;
-
-            while(j<n && a[j] == a[i]) j++;
-
-            v.push_back({a[i], j-i});
-
-            i = j-1;
-        }
-
-        bool win = false;
-
-        for(int i = (int)v.size()-1; i>=0; i--){
-
-            if(i+1 < (int)v.size() &&
-               v[i+1].first - v[i].first > k){
-
-                win = false;
+        vector<ll> ans;
+        ll sum = 0;
+        bool ok = true;
+        for(int i=0;i<n;i++){
+            auto it = mp.lower_bound(1-sum);
+            if(it == mp.end()){
+                ok = false;
+                break;
             }
-
-            if(v[i].second & 1){
-                win = !win;
-            }
+            ll x = *it;
+            mp.erase(it);
+            sum += x;
+            ans.push_back(sum);
         }
 
-        cout<<(win ? "YES" : "NO")<<'\n';
+        if(!ok){
+            cout<<-1<<endl;
+            continue;
+        }
+        for(int i=0;i<n;i++){
+            cout<<ans[i]<<" ";
+        }
+        cout<<endl;
     }
-
     return 0;
 }

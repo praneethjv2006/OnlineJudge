@@ -37,7 +37,12 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
+      const isAllowed =
+        !origin ||
+        allowedOrigins.includes(origin) ||
+        /^https:\/\/[a-zA-Z0-9-]+\.onlinejudge-5dc\.pages\.dev$/.test(origin);
+
+      if (isAllowed) {
         callback(null, true);
       } else {
         callback(new Error("Not allowed by CORS"));

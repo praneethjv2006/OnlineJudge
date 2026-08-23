@@ -1,43 +1,31 @@
 #include <bits/stdc++.h>
 using namespace std;
-#define ll long long
 
 int main(){
     int t;
     cin>>t;
     while(t--){
-        int n;
-        cin>>n;
-        multiset<ll>mp;
-        for(int i=0;i<n;i++){
-            ll x;
-            cin>>x;
-            mp.insert(x);
+        int n, q;
+        cin>>n>>q;
+        string s;
+        cin>>s;
+
+        vector<int>pref(n, 0);
+        for(int i=1; i<n; i++){
+            pref[i] = pref[i-1];
+            if(s[i]==s[i-1]) pref[i]++;
         }
 
-        vector<ll> ans;
-        ll sum = 0;
-        bool ok = true;
-        for(int i=0;i<n;i++){
-            auto it = mp.lower_bound(1-sum);
-            if(it == mp.end()){
-                ok = false;
-                break;
-            }
-            ll x = *it;
-            mp.erase(it);
-            sum += x;
-            ans.push_back(sum);
+        while(q--){
+            int l, r, k;
+            cin>>l>>r>>k;
+            l--;
+            r--;
+            int bad = pref[r]-pref[l];
+            int need = (bad+1)/2;
+            if(need<=k) cout<<"YES\n";
+            else cout<<"NO\n";
         }
-
-        if(!ok){
-            cout<<-1<<endl;
-            continue;
-        }
-        for(int i=0;i<n;i++){
-            cout<<ans[i]<<" ";
-        }
-        cout<<endl;
     }
     return 0;
 }

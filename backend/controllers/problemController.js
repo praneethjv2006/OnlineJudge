@@ -406,9 +406,11 @@ const analyzeCode = async (req, res) => {
     });
 
     const models = [
-      "qwen/qwen3-32b",
+      "openai/gpt-oss-120b",
+      "qwen/qwen3.6-27b",
+      "openai/gpt-oss-20b",
       "llama-3.3-70b-versatile",
-      "openai/gpt-oss-120b"
+      "llama-3.1-8b-instant"
     ];
 
     const systemPrompt = `You are a secure code analysis tool. Your job is to analyze the user's code for a specific problem.

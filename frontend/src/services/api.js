@@ -1,8 +1,8 @@
 import axios from "axios";
 
 // IS_DEPLOYED is derived from the environment variable if needed, 
-// but BASE_URL is now directly controlled by VITE_API_URL in .env
-const BASE_URL = import.meta.env.VITE_API_URL || "https://onlinejudge-xtob.onrender.com/api";
+// Hardcoding the Render URL so that incorrect Cloudflare Pages environment variables are ignored
+const BASE_URL = "https://onlinejudge-xtob.onrender.com/api";
 
 const api = axios.create({
   baseURL: BASE_URL,

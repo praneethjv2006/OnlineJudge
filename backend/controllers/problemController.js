@@ -322,7 +322,12 @@ const runProblemCode = async (req, res) => {
 
     let finalCode = code;
     if (isFunctionMode && problem.isFunctionMode && problem.driverCode && problem.driverCode[language]) {
-      finalCode = code + "\n\n" + problem.driverCode[language];
+      let driver = problem.driverCode[language];
+      if (typeof driver === "string") {
+        // Fix single-line #include directives to ensure they are on their own lines (preprocessor requirement)
+        driver = driver.replace(/(#include\s+<[^>]+>|#include\s+"[^"]+")\s*/g, "$1\n");
+      }
+      finalCode = code + "\n\n" + driver;
     }
 
     const execution = await runCodeAgainstTestCases({

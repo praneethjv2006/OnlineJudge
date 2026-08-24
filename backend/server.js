@@ -1,6 +1,6 @@
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const dotenv = require("dotenv");
 const cookieParser = require("cookie-parser");
 
 const connectDB = require("./config/db");
@@ -11,8 +11,6 @@ const problemRoutes = require("./routes/problemRoutes");
 const friendRoutes = require("./routes/friendRoutes");
 const chatRoutes = require("./routes/chatRoutes");
 const { ipRateLimiter } = require("./middleware/rateLimiter");
-
-dotenv.config();
 //console.log("MONGO_URI:", process.env.MONGO_URI);
 connectDB();
 
@@ -34,7 +32,8 @@ app.use(express.json());
 app.use(cookieParser());
 
 // Global IP rate limiter (1000 requests per 15 mins)
-app.use(ipRateLimiter(1000));
+// Global IP rate limiter (10000 requests per 15 mins)
+app.use(ipRateLimiter(10000));
 
 app.get("/", (req, res) => {
   res.send("API Running");
@@ -51,8 +50,8 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-// Auth endpoints rate limited strictly (30 requests per 15 mins) to prevent brute forcing
-app.use("/api/auth", ipRateLimiter(30), authRoutes);
+// Auth endpoints rate limited (500 requests per 15 mins) to prevent brute forcing
+app.use("/api/auth", ipRateLimiter(500), authRoutes);
 
 app.use("/api/contests", contestRoutes);
 app.use("/api/problems", problemRoutes);

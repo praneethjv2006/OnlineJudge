@@ -186,18 +186,75 @@ const inferCognitiveCategories = (title = "", tags = []) => {
   return results;
 };
 
+// Legacy: kept for cognitive profile (percentile 0-99)
 const calculateRating = (solvedCount) => {
   if (solvedCount === 0) return 0;
-  if (solvedCount === 1) return 35; // Easy (30-40)
-  if (solvedCount === 2) return 55; // Medium (50-70)
-  if (solvedCount === 3) return 62; // Medium (50-70)
-  if (solvedCount === 4) return 68; // Medium (50-70)
-  if (solvedCount === 5) return 80; // Hard (80-90)
-  if (solvedCount === 6) return 84; // Hard (80-90)
-  if (solvedCount === 7) return 88; // Hard (80-90)
-  if (solvedCount === 8) return 92; // Extreme (90+)
-  if (solvedCount === 9) return 95; // Extreme (90+)
-  return Math.min(99, 95 + (solvedCount - 9)); // Extreme (90+), capped at 99
+  if (solvedCount === 1) return 35;
+  if (solvedCount === 2) return 55;
+  if (solvedCount === 3) return 62;
+  if (solvedCount === 4) return 68;
+  if (solvedCount === 5) return 80;
+  if (solvedCount === 6) return 84;
+  if (solvedCount === 7) return 88;
+  if (solvedCount === 8) return 92;
+  if (solvedCount === 9) return 95;
+  return Math.min(99, 95 + (solvedCount - 9));
+};
+
+// Elo-style rating: difficulty weight + recency bonus
+const DIFFICULTY_POINTS = { easy: 100, medium: 220, hard: 380 };
+
+const computeTagRatings = (acceptedSubs) => {
+  const tagMap = {}; // tag -> { totalPoints, count, lastSolvedAt }
+  const now = Date.now();
+
+  acceptedSubs.forEach((sub) => {
+    const difficulty = sub.difficulty || "medium";
+    const basePoints = DIFFICULTY_POINTS[difficulty] || 220;
+    const tags = sub.tags || [];
+
+    // Recency bonus: up to 20% extra for submissions in the last 30 days
+    const daysSince = Math.max(0, (now - new Date(sub.solvedAt).getTime()) / 86400000);
+    const recencyMultiplier = daysSince < 30 ? 1 + (0.2 * (1 - daysSince / 30)) : 1;
+    const points = Math.round(basePoints * recencyMultiplier);
+
+    tags.forEach((tag) => {
+      if (!tag) return;
+      const normalizedTag = tag.trim().toLowerCase();
+      if (!tagMap[normalizedTag]) {
+        tagMap[normalizedTag] = { displayTag: tag.trim(), totalPoints: 0, count: 0, lastSolvedAt: null };
+      }
+      tagMap[normalizedTag].totalPoints += points;
+      tagMap[normalizedTag].count += 1;
+      if (!tagMap[normalizedTag].lastSolvedAt || new Date(sub.solvedAt) > new Date(tagMap[normalizedTag].lastSolvedAt)) {
+        tagMap[normalizedTag].lastSolvedAt = sub.solvedAt;
+      }
+    });
+  });
+
+  return Object.entries(tagMap).map(([, entry]) => {
+    const { displayTag, totalPoints, count } = entry;
+    // Cap at 3000 Codeforces-style, compress via sqrt curve
+    const rawRating = Math.round(Math.min(3000, totalPoints));
+    const tier = getTierFromRating(rawRating);
+    return { tag: displayTag, rating: rawRating, solved: count, tier };
+  }).sort((a, b) => b.rating - a.rating);
+};
+
+const getTierFromRating = (rating) => {
+  if (rating === 0) return "Unranked";
+  if (rating < 400) return "Novice";
+  if (rating < 800) return "Apprentice";
+  if (rating < 1400) return "Proficient";
+  if (rating < 2000) return "Expert";
+  if (rating < 2700) return "Master";
+  return "Grandmaster";
+};
+
+const computeOverallRating = (tagRatings, easySolved, mediumSolved, hardSolved) => {
+  const base = (easySolved * 80) + (mediumSolved * 200) + (hardSolved * 350);
+  const topTagBonus = tagRatings.slice(0, 5).reduce((sum, t) => sum + t.rating * 0.1, 0);
+  return Math.round(Math.min(3000, base + topTagBonus));
 };
 
 const getMyStats = async (req, res) => {
@@ -213,7 +270,7 @@ const getMyStats = async (req, res) => {
     // Fetch all submissions for this user, populating the contest questions and problem details
     const submissions = await Submission.find({ user: userId })
       .populate("contest", "title questions")
-      .populate("problem", "title difficulty category cognitiveCategories topics")
+      .populate("problem", "title difficulty category cognitiveCategories topics tags")
       .sort({ createdAt: -1 });
 
     const solvedSet = new Set();
@@ -230,6 +287,12 @@ const getMyStats = async (req, res) => {
       solvedCounts[cat] = 0;
     });
 
+    // For tag-based skill rating
+    const acceptedSubsForTagRating = [];
+    let easySolved = 0;
+    let mediumSolved = 0;
+    let hardSolved = 0;
+
     submissions.forEach((sub) => {
       if (sub.verdict === "Accepted") {
         let questionKey = "";
@@ -245,6 +308,18 @@ const getMyStats = async (req, res) => {
             } else {
               cogCats = inferCognitiveCategories(q?.title || "", q?.topics || []);
             }
+
+            // Tag rating data for contest questions
+            const qDifficulty = q?.difficulty || "medium";
+            const qTags = q?.tags || q?.topics || [];
+            acceptedSubsForTagRating.push({
+              difficulty: qDifficulty,
+              tags: qTags,
+              solvedAt: sub.submittedAt || sub.createdAt,
+            });
+            if (qDifficulty === "easy") easySolved++;
+            else if (qDifficulty === "hard") hardSolved++;
+            else mediumSolved++;
           }
         } else if (sub.problem) {
           questionKey = `problem-${sub.problem._id || sub.problem}`;
@@ -258,6 +333,18 @@ const getMyStats = async (req, res) => {
                 sub.problem?.tags || sub.problem?.topics || []
               );
             }
+
+            // Tag rating data for practice problems
+            const pDifficulty = sub.problem?.difficulty || "medium";
+            const pTags = sub.problem?.tags || sub.problem?.topics || [];
+            acceptedSubsForTagRating.push({
+              difficulty: pDifficulty,
+              tags: pTags,
+              solvedAt: sub.submittedAt || sub.createdAt,
+            });
+            if (pDifficulty === "easy") easySolved++;
+            else if (pDifficulty === "hard") hardSolved++;
+            else mediumSolved++;
           }
         }
 
@@ -293,10 +380,26 @@ const getMyStats = async (req, res) => {
       };
     });
 
+    // Compute tag-based skill ratings (new UVP feature)
+    const tagRatings = computeTagRatings(acceptedSubsForTagRating);
+    const overallRating = computeOverallRating(tagRatings, easySolved, mediumSolved, hardSolved);
+    const overallTier = getTierFromRating(overallRating);
+
+    const skillMetadata = {
+      overallRating,
+      tier: overallTier,
+      tagRatings,
+      easySolved,
+      mediumSolved,
+      hardSolved,
+      totalSolved,
+    };
+
     return res.json({
       user: safeUser(user),
       totalSolved,
       cognitiveProfile,
+      skillMetadata,
       submissions: submissions.map((sub) => {
         let questionTitle = "Unknown Problem";
         let difficulty = "medium";

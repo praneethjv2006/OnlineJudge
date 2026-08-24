@@ -184,6 +184,19 @@ function AppRoutes() {
 
 // ─── Root ────────────────────────────────────────────────────────────────────
 function App() {
+  useEffect(() => {
+    // Send health/wakeup pings to Render services on app load to wake them from sleep (cold starts)
+    const wakeUpRenderServices = () => {
+      const backendHealthUrl = "https://onlinejudge-xtob.onrender.com/api/health";
+      const compilerHealthUrl = "https://apexjudge-compiler-v3.onrender.com/languages";
+
+      fetch(backendHealthUrl).catch((err) => console.log("Wakeup ping to backend initiated:", err));
+      fetch(compilerHealthUrl).catch((err) => console.log("Wakeup ping to compiler initiated:", err));
+    };
+
+    wakeUpRenderServices();
+  }, []);
+
   return (
     <BrowserRouter>
       <AppRoutes />

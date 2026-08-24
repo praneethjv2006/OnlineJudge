@@ -1,6 +1,8 @@
 {
   "dependencies": {
+    "bullmq": "^6.2.0",
     "groq-sdk": "^1.2.1",
+    "ioredis": "^6.0.0",
     "react-router-dom": "^7.17.0"
   }
 }

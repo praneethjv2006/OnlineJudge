@@ -4,6 +4,7 @@ import { useAppContext } from "../App";
 import { 
   getContestSubmissions, 
   loadContest, 
+  loadContestLeaderboard,
   runContestCode, 
   startContest,
   endContest
@@ -33,7 +34,9 @@ import {
   Loader2,
   Info,
   Wand2,
-  X
+  X,
+  Monitor,
+  Medal
 } from "lucide-react";
 
 const LANGUAGE_OPTIONS = [
@@ -88,6 +91,63 @@ const formatCountdown = (dateValue, referenceTime = Date.now()) => {
   const seconds = totalSeconds % 60;
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 };
+
+// ─── Inline Leaderboard Tab ──────────────────────────────────────────────────
+function LeaderboardTab({ contestId, currentUserId, questions = [] }) {
+  const [leaderboard, setLeaderboard] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    const fetch = async () => {
+      setIsLoading(true);
+      try {
+        const data = await loadContestLeaderboard(contestId);
+        if (mounted) setLeaderboard(data.leaderboard || []);
+      } catch {
+        // silent fail
+      } finally {
+        if (mounted) setIsLoading(false);
+      }
+    };
+    fetch();
+    // Refresh leaderboard every 30s during live contest
+    const interval = setInterval(fetch, 30000);
+    return () => { mounted = false; clearInterval(interval); };
+  }, [contestId]);
+
+  if (isLoading) return (
+    <div className="lb-inline-loading"><Loader2 size={20} className="anim-spin" /><span>Loading standings...</span></div>
+  );
+
+  if (leaderboard.length === 0) return (
+    <div className="lb-inline-empty"><Trophy size={32} style={{ opacity: 0.15 }} /><p>No submissions yet</p></div>
+  );
+
+  return (
+    <div className="lb-inline">
+      <div className="lb-inline-header">
+        <Trophy size={14} style={{ color: "var(--accent)" }} />
+        <span>Live Standings</span>
+        <span className="lb-auto-refresh">auto-refresh 30s</span>
+      </div>
+      <div className="lb-inline-list">
+        {leaderboard.map((entry, idx) => {
+          const isMe = entry.user?.toString() === currentUserId?.toString();
+          return (
+            <div key={entry.user || idx} className={`lb-inline-row ${isMe ? "lb-inline-me" : ""}`}>
+              <span className="lb-inline-rank">#{entry.rank || idx + 1}</span>
+              <div className="lb-inline-avatar">{(entry.userName || "U")[0]}</div>
+              <span className="lb-inline-name">{entry.userName}{isMe && " (You)"}</span>
+              <span className="lb-inline-score">{entry.score}pt</span>
+              <span className="lb-inline-solved">{entry.questionsSolved}/{questions.length}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 function ContestRoomPage() {
   const { contestId } = useParams();
@@ -210,8 +270,10 @@ function ContestRoomPage() {
   const currentQuestion = contest?.questions?.[selectedQuestionIndex];
   const isLive = contest?.status === "live";
   const isEnded = contest?.status === "ended";
+  const isVirtual = contest?.type === "virtual";
   const liveDeadline = contest?.actualEndAt || contest?.endAt;
-  const canRun = !isEnded;
+  // For virtual or upsolve mode, allow running/submitting
+  const canRun = isVirtual || !isEnded;
 
   const handleRunTestCases = async () => {
     if (!currentQuestion || !canRun) return;
@@ -406,7 +468,33 @@ function ContestRoomPage() {
     }
   };
 
-  if (isLoading) return <div className="loading-state">Loading...</div>;
+  if (isLoading) return (
+    <div className="contest-workspace-root workspace-skeleton">
+      <div className="workspace-header skeleton-header">
+        <div className="sk-line sk-back" />
+        <div className="sk-line sk-problem-nav" />
+        <div className="sk-line sk-timer" />
+        <div className="sk-line sk-actions" />
+      </div>
+      <div className="workspace-main">
+        <div className="leetcode-layout" style={{ gridTemplateColumns: '50% 6px 1fr' }}>
+          <div className="leetcode-left-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div className="sk-line" style={{ height: '32px', borderRadius: '8px', width: '180px' }} />
+            <div className="sk-line" style={{ height: '24px', borderRadius: '8px', width: '80%' }} />
+            <div className="sk-line" style={{ height: '16px', borderRadius: '8px', width: '100%' }} />
+            <div className="sk-line" style={{ height: '16px', borderRadius: '8px', width: '90%' }} />
+            <div className="sk-line" style={{ height: '16px', borderRadius: '8px', width: '70%' }} />
+            <div className="sk-line" style={{ height: '100px', borderRadius: '12px', width: '100%' }} />
+          </div>
+          <div className="resizer-v" />
+          <div className="leetcode-right-panel" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div className="sk-line" style={{ height: '36px', borderRadius: '8px', width: '140px' }} />
+            <div className="sk-line" style={{ flex: 1, borderRadius: '12px' }} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
   if (!contest) return <div className="error-state">{error || "Contest not found."}</div>;
 
   return (
@@ -636,6 +724,19 @@ function ContestRoomPage() {
 
         <div className="leetcode-layout" style={{ gridTemplateColumns: `${leftWidth}% 6px 1fr` }}>
           <div className="leetcode-left-panel">
+            {/* Virtual Contest Banner */}
+            {contest.type === 'virtual' && (
+              <div className="virtual-contest-banner">
+                <Monitor size={14} />
+                <span>Virtual Contest — replaying <strong>{contest.title?.replace('[Virtual] ', '')}</strong></span>
+              </div>
+            )}
+            {isEnded && contest.type !== 'virtual' && (
+              <div className="upsolve-banner">
+                <CheckCircle2 size={14} />
+                <span>Contest ended — you can still upsolve problems</span>
+              </div>
+            )}
             <div className="panel-tabs">
               <button className={`panel-tab ${leftTab === 'questions' ? 'active' : ''}`} onClick={() => setLeftTab('questions')}>
                 <Trophy size={16} /> Problems
@@ -645,6 +746,9 @@ function ContestRoomPage() {
               </button>
               <button className={`panel-tab ${leftTab === 'submissions' ? 'active' : ''}`} onClick={() => setLeftTab('submissions')}>
                 <History size={16} /> Submissions
+              </button>
+              <button className={`panel-tab ${leftTab === 'leaderboard' ? 'active' : ''}`} onClick={() => setLeftTab('leaderboard')}>
+                <Medal size={16} /> Standings
               </button>
             </div>
 
@@ -688,11 +792,13 @@ function ContestRoomPage() {
                     </button>
                   ))}
                 </div>
+              ) : leftTab === 'leaderboard' ? (
+                <LeaderboardTab contestId={contestId} currentUserId={user?.id || user?._id} questions={contest.questions} />
               ) : (
                 <div className="submissions-view">
                   <h3 className="section-title">My Submissions</h3>
                   {isSubmissionsLoading ? (
-                    <div className="loading-sub">Loading...</div>
+                    <div className="loading-sub"><Loader2 size={18} className="anim-spin" /> Loading...</div>
                   ) : submissions.filter(s => s.questionIndex === selectedQuestionIndex).length === 0 ? (
                     <div className="empty-sub">No submissions found for this question.</div>
                   ) : (

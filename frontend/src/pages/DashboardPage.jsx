@@ -55,13 +55,42 @@ function DashboardPage() {
 
   if (isLoading) {
     return (
-      <div className="empty-state" style={{ minHeight: "300px", display: "grid", placeItems: "center" }}>
-        <h3>Loading your developer dashboard...</h3>
-      </div>
+      <section className="page-stack dashboard-page">
+        <div className="dashboard-skeleton">
+          <div className="dashboard-grid-main">
+            <div className="panel" style={{ padding: "28px", display: "flex", gap: "16px", alignItems: "center" }}>
+              <div className="sk-line" style={{ width: "72px", height: "72px", borderRadius: "50%", flexShrink: 0 }} />
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "10px" }}>
+                <div className="sk-line" style={{ height: "22px", width: "60%" }} />
+                <div className="sk-line" style={{ height: "14px", width: "40%" }} />
+              </div>
+            </div>
+            <div className="panel" style={{ padding: "28px", display: "flex", gap: "20px", alignItems: "center" }}>
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "10px" }}>
+                <div className="sk-line" style={{ height: "18px", width: "50%" }} />
+                <div className="sk-line" style={{ height: "32px", width: "80%" }} />
+              </div>
+              <div className="sk-line" style={{ width: "80px", height: "80px", borderRadius: "50%", flexShrink: 0 }} />
+            </div>
+          </div>
+          <div className="panel" style={{ padding: "28px", display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div className="sk-line" style={{ height: "22px", width: "200px" }} />
+            {[1, 2, 3].map(i => (
+              <div key={i} style={{ display: "flex", gap: "16px", alignItems: "center" }}>
+                <div className="sk-line" style={{ width: "44px", height: "44px", borderRadius: "10px", flexShrink: 0 }} />
+                <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "8px" }}>
+                  <div className="sk-line" style={{ height: "14px", width: "70%" }} />
+                  <div className="sk-line" style={{ height: "8px", width: "100%", borderRadius: "4px" }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
     );
   }
 
-  const { totalSolved = 0, submissions = [] } = stats || {};
+  const { totalSolved = 0, submissions = [], skillMetadata = null } = stats || {};
 
   // Calculate submission map and streaks
   const submissionsMap = {};
@@ -292,6 +321,86 @@ function DashboardPage() {
           })}
         </div>
       </div>
+
+      {/* SKILL DNA — Tag Rating System (UVP) */}
+      {skillMetadata && (
+        <div className="skill-dna-card panel">
+          <div className="skill-dna-header">
+            <div className="skill-dna-title-group">
+              <div className="skill-dna-icon"><Zap size={18} /></div>
+              <div>
+                <h3 className="skill-dna-title">Skill DNA</h3>
+                <p className="skill-dna-subtitle">Your personalized rating profile based on tags & difficulty</p>
+              </div>
+            </div>
+            <div className={`overall-rating-badge tier-${skillMetadata.tier?.toLowerCase() || 'novice'}`}>
+              <span className="overall-rating-num">{skillMetadata.overallRating}</span>
+              <span className="overall-rating-tier">{skillMetadata.tier}</span>
+            </div>
+          </div>
+
+          {/* Difficulty breakdown */}
+          <div className="diff-breakdown-row">
+            <div className="diff-stat easy">
+              <span className="diff-count">{skillMetadata.easySolved}</span>
+              <span className="diff-label">Easy</span>
+            </div>
+            <div className="diff-stat medium">
+              <span className="diff-count">{skillMetadata.mediumSolved}</span>
+              <span className="diff-label">Medium</span>
+            </div>
+            <div className="diff-stat hard">
+              <span className="diff-count">{skillMetadata.hardSolved}</span>
+              <span className="diff-label">Hard</span>
+            </div>
+            <div className="diff-stat total">
+              <span className="diff-count">{skillMetadata.totalSolved}</span>
+              <span className="diff-label">Total</span>
+            </div>
+          </div>
+
+          {/* Tag ratings */}
+          {skillMetadata.tagRatings?.length > 0 ? (
+            <div className="tag-ratings-grid">
+              {skillMetadata.tagRatings.slice(0, 12).map((tag) => {
+                const pct = Math.round((tag.rating / 3000) * 100);
+                const tierColor = {
+                  "Grandmaster": "#ef4743",
+                  "Master": "#ffa116",
+                  "Expert": "#9b5de5",
+                  "Proficient": "#00b4d8",
+                  "Apprentice": "#2cbb5d",
+                  "Novice": "#666",
+                  "Unranked": "#444",
+                }[tag.tier] || "#666";
+
+                return (
+                  <div key={tag.tag} className="tag-rating-row">
+                    <div className="tag-rating-left">
+                      <span className="tag-name">{tag.tag}</span>
+                      <span className="tag-solved">{tag.solved} solved</span>
+                    </div>
+                    <div className="tag-rating-right">
+                      <div className="tag-bar-bg">
+                        <div
+                          className="tag-bar-fill"
+                          style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${tierColor}88, ${tierColor})` }}
+                        />
+                      </div>
+                      <span className="tag-rating-num" style={{ color: tierColor }}>{tag.rating}</span>
+                      <span className={`tag-tier-badge tier-${tag.tier?.toLowerCase()}`}>{tag.tier}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="tag-ratings-empty">
+              <p>Solve problems with tags to build your Skill DNA profile</p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* 2. ACTIVITY HEATMAP CARD (Leetcode-Style) */}
       <div className="heatmap-card-container">

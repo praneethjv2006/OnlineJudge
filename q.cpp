@@ -1,65 +1,92 @@
 #include <bits/stdc++.h>
 using namespace std;
 
-int main() {
-    int t;
-    cin>>t;
-    while(t--){
-        string a, b;
-        cin>>a>>b;
-        int n = a.size();
-        int m = b.size();
-        vector<int> preA(n+1, 0), preB(m+1, 0);
-        for(int i = 1; i<=n; i++) preA[i] = (preA[i-1]+(a[i-1] -'0'))%10;
-        for(int i = 1; i<=m; i++) preB[i] = (preB[i-1]+(b[i-1] -'0'))%10;
+enum class VehicleType {CAR,BIKE,TRUCK};
+enum class SpotType {CAR,BIKE,TRUCK};
 
-        //dp[i][j] = maximum equal string length with first i of a and first j of b
-        vector<vector<int>> dp(n+1, vector<int>(m+1, -1));
-        dp[0][0] = 0;
-        vector<vector<int>> bestCol(10, vector<int>(m+1, -1));
+class Vehicle {
+public:
+    string license; VehicleType type;
+    Vehicle(string license, VehicleType type):license(license), type(type) {}
+};
+// ---------------- ParkingSpot ----------------
+class ParkingSpot {
+public:
+    int id; SpotType type; Vehicle* vehicle;
+    ParkingSpot(int id, SpotType type)
+        : id(id), type(type), vehicle(nullptr) {}
 
-        for(int j = 0; j <= m; j++) {
-            int diff = (preA[0] - preB[j] + 10) % 10;
-            bestCol[diff][j] = dp[0][j];
-        }
+    bool isFree() {return vehicle == nullptr;}
+    bool canFit(Vehicle* v) {
+        return isFree() &&
+               (type == SpotType::CAR && v->type == VehicleType::CAR ||
+                type == SpotType::BIKE && v->type == VehicleType::BIKE ||
+                type == SpotType::TRUCK && v->type == VehicleType::TRUCK);
+    }
+    void assignVehicle(Vehicle* v) { vehicle = v; }
+    void removeVehicle() { vehicle = nullptr;}
+};
+// ---------------- Level ----------------
+class Level {
+public:
+    int floor; vector<ParkingSpot*> spots;
+    Level(int floor) : floor(floor) {}
+    void addSpot(ParkingSpot* spot) {spots.push_back(spot); }
+    ParkingSpot* getSpot(Vehicle* v) {
+        for (auto spot : spots)if(spot->canFit(v)) return spot;
+        return nullptr;
+    }
+    bool parkVehicle(Vehicle* v) {
+        ParkingSpot* spot = getSpot(v);
+        if (spot == nullptr) return false;
+        spot->assignVehicle(v);
+        return true;
+    }
+};
 
-        for (int i = 1; i <= n; i++) {
-
-            // bestRow[diff]
-            // best answer till previous column
-            vector<int> bestRow(10, -1);
-
-            // Initially consider column 0
-            for (int d = 0; d < 10; d++)
-                bestRow[d] = bestCol[d][0];
-
-            for (int j = 1; j <= m; j++) {
-
-                int diff = (preA[i] - preB[j] + 10) % 10;
-
-                // Can we create one more equal digit?
-                if (bestRow[diff] != -1)
-                    dp[i][j] = bestRow[diff] + 1;
-
-                // Update bestRow using current column
-                for (int d = 0; d < 10; d++)
-                    bestRow[d] = max(bestRow[d], bestCol[d][j]);
+// ---------------- Ticket ----------------
+class Ticket {
+public:
+    int id; Vehicle* vehicle; ParkingSpot* spot; long long entryTime;
+    Ticket(int id, Vehicle* vehicle, ParkingSpot* spot)
+        : id(id), vehicle(vehicle), spot(spot) { entryTime = time(nullptr);}
+};
+// ---------------- ParkingLot ----------------
+class ParkingLot {
+public:
+    vector<Level*> levels; int nextTicketId = 1;
+    void addLevel(Level* level) { levels.push_back(level);}
+    Ticket* parkVehicle(Vehicle* v) {
+        for (auto level : levels) {
+            ParkingSpot* spot = level->getSpot(v);
+            if (spot != nullptr) {
+                spot->assignVehicle(v);
+                Ticket* ticket = new Ticket(nextTicketId++, v, spot);
+                return ticket;
             }
-
-            // Store current row into bestCol
-            for (int j = 0; j <= m; j++) {
-
-                if (dp[i][j] == -1)
-                    continue;
-
-                int diff = (preA[i] - preB[j] + 10) % 10;
-
-                bestCol[diff][j] = max(bestCol[diff][j], dp[i][j]);
-            }
         }
-
-        cout << dp[n][m] << '\n';
+        cout << "No parking spot available\n";
+        return nullptr;
     }
 
+    void freeSpot(Ticket* ticket) {
+        if (ticket == nullptr)return;
+        ticket->spot->removeVehicle();
+    }
+};
+
+// ---------------- Main ----------------
+int main() {
+    ParkingLot lot;
+    Level* level1 = new Level(1);
+    level1->addSpot(new ParkingSpot(1, SpotType::CAR));
+    level1->addSpot(new ParkingSpot(2, SpotType::BIKE));
+    level1->addSpot(new ParkingSpot(3, SpotType::TRUCK));
+    lot.addLevel(level1);
+    Vehicle car("KA01AB1234", VehicleType::CAR);
+    Vehicle bike("KA02XY5678", VehicleType::BIKE);
+    Ticket* carTicket = lot.parkVehicle(&car);
+    Ticket* bikeTicket = lot.parkVehicle(&bike);
+    lot.freeSpot(carTicket);
     return 0;
 }

@@ -25,7 +25,38 @@ const getConversations = async (req, res) => {
       .populate("participants", "name email")
       .populate("lastMessage.sender", "name");
 
-    return res.json({ conversations });
+    // Aggregate unread messages count for each conversation
+    const convIds = conversations.map((c) => c._id);
+    const unreadCounts = await Message.aggregate([
+      {
+        $match: {
+          conversationId: { $in: convIds },
+          sender: { $ne: me._id },
+          seenBy: { $ne: me._id },
+        },
+      },
+      {
+        $group: {
+          _id: "$conversationId",
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const unreadMap = {};
+    for (const u of unreadCounts) {
+      unreadMap[u._id.toString()] = u.count;
+    }
+
+    const enriched = conversations.map((conv) => {
+      const obj = conv.toObject();
+      const count = unreadMap[conv._id.toString()] || 0;
+      obj.unreadCount = count;
+      obj.hasUnread = count > 0;
+      return obj;
+    });
+
+    return res.json({ conversations: enriched });
   } catch (err) {
     return res.status(500).json({ message: "Failed to fetch conversations.", error: err.message });
   }
@@ -164,6 +195,19 @@ const getMessages = async (req, res) => {
     const limit = Math.min(100, parseInt(req.query.limit, 10) || 50);
     const skip = (page - 1) * limit;
 
+    // Automatically mark all messages from other participants as seen by current user
+    await Message.updateMany(
+      {
+        conversationId: conversation._id,
+        sender: { $ne: me._id },
+        seenBy: { $ne: me._id },
+      },
+      {
+        $addToSet: { seenBy: me._id },
+        $set: { status: "seen", seenAt: new Date() },
+      }
+    );
+
     const [messages, total] = await Promise.all([
       Message.find({ conversationId: conversation._id })
         .sort({ createdAt: -1 })  // Newest first for pagination
@@ -185,6 +229,38 @@ const getMessages = async (req, res) => {
     });
   } catch (err) {
     return res.status(500).json({ message: "Failed to fetch messages.", error: err.message });
+  }
+};
+
+// ─── Mark Conversation Seen (WhatsApp Blue Ticks & Clear Red Dot) ─────────────
+
+const markConversationSeen = async (req, res) => {
+  try {
+    const me = await resolveUserFromAccessToken(req);
+    if (!me) return res.status(401).json({ message: "Please sign in." });
+
+    const conversation = await Conversation.findById(req.params.id);
+    if (!conversation) return res.status(404).json({ message: "Conversation not found." });
+
+    if (!assertParticipant(conversation, me._id)) {
+      return res.status(403).json({ message: "Not a participant in this conversation." });
+    }
+
+    await Message.updateMany(
+      {
+        conversationId: conversation._id,
+        sender: { $ne: me._id },
+        seenBy: { $ne: me._id },
+      },
+      {
+        $addToSet: { seenBy: me._id },
+        $set: { status: "seen", seenAt: new Date() },
+      }
+    );
+
+    return res.json({ success: true, message: "Marked as seen." });
+  } catch (err) {
+    return res.status(500).json({ message: "Failed to mark seen.", error: err.message });
   }
 };
 
@@ -233,6 +309,8 @@ const sendMessage = async (req, res) => {
       type,
       language,
       replyTo: replyToData,
+      status: "saved",
+      seenBy: [me._id],
       expiresAt,
     });
 
@@ -365,6 +443,7 @@ module.exports = {
   createGroup,
   addGroupMember,
   getMessages,
+  markConversationSeen,
   sendMessage,
   deleteMessage,
   toggleReaction,

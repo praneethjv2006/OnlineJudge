@@ -32,6 +32,11 @@ export const getMessages = async (conversationId, page = 1, limit = 50) => {
   return res.data;
 };
 
+export const markConversationSeen = async (conversationId) => {
+  const res = await api.post(`/chat/conversations/${conversationId}/seen`);
+  return res.data;
+};
+
 export const sendMessage = async (conversationId, content, type = "text", language = null, replyTo = null) => {
   const res = await api.post(`/chat/conversations/${conversationId}/messages`, {
     content,

@@ -247,38 +247,25 @@ function DashboardPage() {
           <Award size={18} style={{ color: "#00b4d8" }} />
           <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: "700", color: "#fff" }}>Cognitive Profile Engine</h3>
         </div>
-        <p style={{ color: "var(--muted)", fontSize: "0.9rem", marginTop: "-10px", marginBottom: "20px" }}>
-          Real-time cognitive profile ratings computed dynamically based on the complexity, difficulty, and variety of challenges you solve.
-        </p>
 
         <div className="cognitive-grid">
           {(stats?.cognitiveProfile || []).map((skill) => {
             let SkillIcon = Layers;
             let themeColor = "#9b5de5"; // purple
-            let skillDesc = "Identifies structural patterns, sub-segments, and sequence formulas.";
 
             if (skill.name === "Optimization Ability") {
               SkillIcon = Zap;
               themeColor = "#00b4d8"; // blue
-              skillDesc = "Devises greedily optimal, divide-and-conquer, or DP strategies.";
             } else if (skill.name === "Mathematical Reasoning") {
               SkillIcon = Cpu;
               themeColor = "#06d6a0"; // green
-              skillDesc = "Applies number theory, modular arithmetic, and combinatorial logic.";
             } else if (skill.name === "Logic Flow & Debugging") {
               SkillIcon = Activity;
               themeColor = "#ffd166"; // yellow
-              skillDesc = "Traces complex conditional paths, state logic, and locates edge case anomalies.";
             } else if (skill.name === "Memory & Complexity") {
               SkillIcon = Target;
               themeColor = "#ef476f"; // red/pink
-              skillDesc = "Manages time-limit parameters, space-complexity bounds, and handles precision constraints.";
             }
-
-            let badgeClass = "badge-easy";
-            if (skill.tier === "Medium") badgeClass = "badge-medium";
-            else if (skill.tier === "Hard") badgeClass = "badge-hard";
-            else if (skill.tier === "Extreme") badgeClass = "badge-extreme";
 
             return (
               <div key={skill.name} className="cognitive-skill-row">
@@ -288,32 +275,18 @@ function DashboardPage() {
                   </div>
                   <div>
                     <h4 style={{ margin: 0, fontSize: "0.95rem", color: "#fff" }}>{skill.name}</h4>
-                    <p style={{ margin: "2px 0 0 0", fontSize: "0.78rem", color: "var(--muted)", lineHeight: "1.3" }}>
-                      {skillDesc}
-                    </p>
                   </div>
                 </div>
 
                 <div className="skill-stats-right">
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
-                    <span style={{ fontSize: "0.8rem", color: "var(--muted)" }}>
-                      Solved: <strong>{skill.solved}</strong>
+                  <div className="cognitive-rating-pill" style={{ borderColor: `${themeColor}44`, background: `${themeColor}12` }}>
+                    <span className="cognitive-rating-score" style={{ color: themeColor }}>
+                      <strong>{skill.rating}</strong> <small>pts</small>
                     </span>
-                    <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                      <span className={`cognitive-badge ${badgeClass}`}>{skill.tier}</span>
-                      <strong style={{ fontSize: "0.95rem", color: themeColor }}>{skill.rating}</strong>
-                      <span style={{ fontSize: "0.75rem", color: "var(--muted)" }}>/100</span>
-                    </div>
-                  </div>
-                  <div className="skill-progress-bar-bg">
-                    <div
-                      className="skill-progress-bar-fill"
-                      style={{
-                        width: `${skill.rating}%`,
-                        background: `linear-gradient(90deg, ${themeColor}aa, ${themeColor})`,
-                        boxShadow: `0 0 8px ${themeColor}60`
-                      }}
-                    />
+                    <span className="cognitive-rating-sep" style={{ color: `${themeColor}44` }}>|</span>
+                    <span className="cognitive-rating-solved">
+                      {skill.solved} solved
+                    </span>
                   </div>
                 </div>
               </div>
@@ -330,12 +303,11 @@ function DashboardPage() {
               <div className="skill-dna-icon"><Zap size={18} /></div>
               <div>
                 <h3 className="skill-dna-title">Skill DNA</h3>
-                <p className="skill-dna-subtitle">Your personalized rating profile based on tags & difficulty</p>
               </div>
             </div>
-            <div className={`overall-rating-badge tier-${skillMetadata.tier?.toLowerCase() || 'novice'}`}>
-              <span className="overall-rating-num">{skillMetadata.overallRating}</span>
-              <span className="overall-rating-tier">{skillMetadata.tier}</span>
+            <div className={`overall-rating-badge tier-${skillMetadata.tier?.toLowerCase().replace(/ /g, '-') || 'unranked'}`}>
+              <span className="overall-rating-num">{skillMetadata.overallRating || 0}</span>
+              <span className="overall-rating-tier">{skillMetadata.tier || 'Unranked'}</span>
             </div>
           </div>
 
@@ -363,14 +335,14 @@ function DashboardPage() {
           {skillMetadata.tagRatings?.length > 0 ? (
             <div className="tag-ratings-grid">
               {skillMetadata.tagRatings.slice(0, 12).map((tag) => {
-                const pct = Math.round((tag.rating / 3000) * 100);
                 const tierColor = {
-                  "Grandmaster": "#ef4743",
-                  "Master": "#ffa116",
+                  "Legendary": "#ffd700",
+                  "Grandmaster": "#ffa116",
                   "Expert": "#9b5de5",
-                  "Proficient": "#00b4d8",
-                  "Apprentice": "#2cbb5d",
-                  "Novice": "#666",
+                  "Specialist": "#00b4d8",
+                  "Adept": "#06d6a0",
+                  "Challenger": "#2cbb5d",
+                  "Wanderer": "#777",
                   "Unranked": "#444",
                 }[tag.tier] || "#666";
 
@@ -381,12 +353,6 @@ function DashboardPage() {
                       <span className="tag-solved">{tag.solved} solved</span>
                     </div>
                     <div className="tag-rating-right">
-                      <div className="tag-bar-bg">
-                        <div
-                          className="tag-bar-fill"
-                          style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${tierColor}88, ${tierColor})` }}
-                        />
-                      </div>
                       <span className="tag-rating-num" style={{ color: tierColor }}>{tag.rating}</span>
                       <span className={`tag-tier-badge tier-${tag.tier?.toLowerCase()}`}>{tag.tier}</span>
                     </div>

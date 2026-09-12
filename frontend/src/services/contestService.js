@@ -54,3 +54,9 @@ export const startVirtualContest = async (contestId) => {
   const response = await api.post(`/contests/${contestId}/virtual`);
   return response.data;
 };
+
+// Fetch problems from library for the "Add Existing Problem" flow in CreateContestPage
+export const searchProblems = async (query = "") => {
+  const response = await api.get(`/problems${query ? `?search=${encodeURIComponent(query)}` : ""}`);
+  return response.data.problems || [];
+};

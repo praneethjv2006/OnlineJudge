@@ -5,7 +5,6 @@ import PropTypes from "prop-types";
 import { getMyFriends } from "../../services/friendService";
 import { openDirectChat } from "../../services/chatService";
 import { toast } from "../common/Toast";
-import FriendProfileModal from "./FriendProfileModal";
 
 function FriendsPanel({ onClose }) {
   const navigate = useNavigate();
@@ -13,7 +12,6 @@ function FriendsPanel({ onClose }) {
   const [friends, setFriends] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [profileFriend, setProfileFriend] = useState(null);
 
   useEffect(() => {
     const load = async () => {
@@ -56,6 +54,11 @@ function FriendsPanel({ onClose }) {
     }
   };
 
+  const handleViewProfile = (friendId) => {
+    onClose();
+    navigate(`/profile/${friendId}`);
+  };
+
   const filtered = friends.filter((f) =>
     f.name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -64,106 +67,96 @@ function FriendsPanel({ onClose }) {
   const getColor = (name) => colors[(name?.charCodeAt(0) || 0) % colors.length];
 
   return (
-    <>
-      <div className="friends-panel" ref={panelRef}>
-        {/* Header */}
-        <div className="fp-panel-header">
-          <div className="fp-panel-title">
-            <Users size={16} />
-            Friends
-            <span className="fp-panel-count">{friends.length}</span>
-          </div>
-          <button className="fp-panel-close" onClick={onClose}>
-            <X size={14} />
-          </button>
+    <div className="friends-panel" ref={panelRef}>
+      {/* Header */}
+      <div className="fp-panel-header">
+        <div className="fp-panel-title">
+          <Users size={16} />
+          Friends
+          <span className="fp-panel-count">{friends.length}</span>
         </div>
-
-        {/* Search */}
-        <div className="fp-panel-search">
-          <Search size={13} className="fp-panel-search-icon" />
-          <input
-            className="fp-panel-search-input"
-            placeholder="Search friends…"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            autoFocus
-          />
-        </div>
-
-        {/* Friend List */}
-        <div className="fp-panel-list">
-          {isLoading ? (
-            <div className="fp-panel-empty">Loading…</div>
-          ) : filtered.length === 0 ? (
-            <div className="fp-panel-empty">
-              {searchQuery ? `No results for "${searchQuery}"` : "No friends yet."}
-            </div>
-          ) : (
-            filtered.map((f) => (
-              <div key={f._id} className="fp-panel-friend-row">
-                <div
-                  className="fp-panel-avatar"
-                  style={{
-                    background: `${getColor(f.name)}22`,
-                    color: getColor(f.name),
-                    border: `1.5px solid ${getColor(f.name)}44`,
-                  }}
-                >
-                  {f.name?.[0]?.toUpperCase() || "?"}
-                </div>
-                <div className="fp-panel-friend-info">
-                  <span className="fp-panel-friend-name">{f.name}</span>
-                  <span className="fp-panel-friend-email">{f.email}</span>
-                </div>
-                <div className="fp-panel-friend-actions">
-                  <button
-                    className="fp-panel-action-btn"
-                    title="Message"
-                    onClick={() => handleMessage(f._id)}
-                  >
-                    <MessageSquare size={14} />
-                  </button>
-                  <button
-                    className="fp-panel-action-btn"
-                    title="View Profile"
-                    onClick={() => setProfileFriend(f)}
-                  >
-                    <ExternalLink size={14} />
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="fp-panel-footer">
-          <button
-            className="fp-panel-manage-btn"
-            onClick={() => { onClose(); navigate("/friends"); }}
-          >
-            <UserPlus size={14} />
-            Manage Friends
-          </button>
-        </div>
+        <button className="fp-panel-close" onClick={onClose}>
+          <X size={14} />
+        </button>
       </div>
 
-      {/* Friend Profile Modal */}
-      {profileFriend && (
-        <FriendProfileModal
-          friend={profileFriend}
-          onClose={() => setProfileFriend(null)}
-          onMessage={(convId) => {
-            setProfileFriend(null);
-            onClose();
-            navigate("/messages", { state: { conversationId: convId } });
-          }}
-          onUnfriend={(friendId) => {
-            setFriends((prev) => prev.filter((f) => f._id !== friendId));
-          }}
+      {/* Search */}
+      <div className="fp-panel-search">
+        <Search size={13} className="fp-panel-search-icon" />
+        <input
+          className="fp-panel-search-input"
+          placeholder="Search friends…"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          autoFocus
         />
-      )}
-    </>
+      </div>
+
+      {/* Friend List */}
+      <div className="fp-panel-list">
+        {isLoading ? (
+          <div className="fp-panel-empty">Loading…</div>
+        ) : filtered.length === 0 ? (
+          <div className="fp-panel-empty">
+            {searchQuery ? `No results for "${searchQuery}"` : "No friends yet."}
+          </div>
+        ) : (
+          filtered.map((f) => (
+            <div key={f._id} className="fp-panel-friend-row">
+              <div
+                className="fp-panel-avatar"
+                style={{
+                  background: `${getColor(f.name)}22`,
+                  color: getColor(f.name),
+                  border: `1.5px solid ${getColor(f.name)}44`,
+                  cursor: "pointer",
+                }}
+                onClick={() => handleViewProfile(f._id)}
+                title="View full friend dashboard"
+              >
+                {f.name?.[0]?.toUpperCase() || "?"}
+              </div>
+              <div
+                className="fp-panel-friend-info"
+                style={{ cursor: "pointer" }}
+                onClick={() => handleViewProfile(f._id)}
+                title="View full friend dashboard"
+              >
+                <span className="fp-panel-friend-name">{f.name}</span>
+                <span className="fp-panel-friend-email">{f.email}</span>
+              </div>
+              <div className="fp-panel-friend-actions">
+                <button
+                  className="fp-panel-action-btn"
+                  title="Message"
+                  onClick={() => handleMessage(f._id)}
+                >
+                  <MessageSquare size={14} />
+                </button>
+                <button
+                  className="fp-panel-action-btn"
+                  title="View Profile"
+                  onClick={() => handleViewProfile(f._id)}
+                >
+                  <ExternalLink size={14} />
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="fp-panel-footer">
+        <button
+          className="fp-panel-manage-btn"
+          onClick={() => { onClose(); navigate("/friends"); }}
+        >
+          <UserPlus size={14} />
+          Manage Friends
+        </button>
+      </div>
+    </div>
   );
 }
 

@@ -243,12 +243,13 @@ const computeTagRatings = (acceptedSubs) => {
 
 const getTierFromRating = (rating) => {
   if (rating === 0) return "Unranked";
-  if (rating < 400) return "Novice";
-  if (rating < 800) return "Apprentice";
-  if (rating < 1400) return "Proficient";
+  if (rating < 400) return "Wanderer";
+  if (rating < 800) return "Challenger";
+  if (rating < 1200) return "Adept";
+  if (rating < 1600) return "Specialist";
   if (rating < 2000) return "Expert";
-  if (rating < 2700) return "Master";
-  return "Grandmaster";
+  if (rating < 2400) return "Grandmaster";
+  return "Legendary";
 };
 
 const computeOverallRating = (tagRatings, easySolved, mediumSolved, hardSolved) => {

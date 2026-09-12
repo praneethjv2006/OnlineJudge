@@ -27,6 +27,7 @@ import MessagesPage from "./pages/MessagesPage";
 import FriendProfilePage from "./pages/FriendProfilePage";
 import { loadSession, signOut } from "./services/authService";
 import ToastContainer from "./components/common/Toast";
+import { preload3DModel } from "./utils/modelCache";
 
 // ─── Shared outlet context hook (use this in all child pages) ────────────────
 // Returns { user } — user may be null if not authenticated.
@@ -62,7 +63,8 @@ function AppShell({ user, onSignOut }) {
     (location.pathname.startsWith("/contests/") &&
       !location.pathname.endsWith("/create")) ||
     location.pathname.startsWith("/problems/") ||
-    location.pathname === "/shadow-code/dojo";
+    location.pathname === "/shadow-code/dojo" ||
+    location.pathname.startsWith("/profile/");
 
   const isMessagesPage = location.pathname === "/messages";
   const mainClassName = isFullScreen
@@ -127,6 +129,11 @@ function AppRoutes() {
     };
   }, []);
 
+  // Preload 3D Ninja model in the background during idle time
+  useEffect(() => {
+    preload3DModel("/ninja_animation.glb");
+  }, []);
+
   const handleAuthenticated = (sessionUser) => {
     setUser(sessionUser);
     navigate("/home", { replace: true });
@@ -185,16 +192,18 @@ function AppRoutes() {
 // ─── Root ────────────────────────────────────────────────────────────────────
 function App() {
   useEffect(() => {
-    // Send health/wakeup pings to Render services on app load to wake them from sleep (cold starts)
-    const wakeUpRenderServices = () => {
-      const backendHealthUrl = "https://onlinejudge-xtob.onrender.com/api/health";
-      const compilerHealthUrl = "https://apexjudge-compiler-v3.onrender.com/languages";
+    // Send health/wakeup pings to Render services on app load only in production to wake them from sleep (cold starts)
+    if (import.meta.env.PROD) {
+      const wakeUpRenderServices = () => {
+        const backendHealthUrl = "https://onlinejudge-xtob.onrender.com/api/health";
+        const compilerHealthUrl = "https://apexjudge-compiler-v3.onrender.com/languages";
 
-      fetch(backendHealthUrl).catch((err) => console.log("Wakeup ping to backend initiated:", err));
-      fetch(compilerHealthUrl).catch((err) => console.log("Wakeup ping to compiler initiated:", err));
-    };
+        fetch(backendHealthUrl).catch((err) => console.log("Wakeup ping to backend initiated:", err));
+        fetch(compilerHealthUrl).catch((err) => console.log("Wakeup ping to compiler initiated:", err));
+      };
 
-    wakeUpRenderServices();
+      wakeUpRenderServices();
+    }
   }, []);
 
   return (

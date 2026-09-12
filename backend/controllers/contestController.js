@@ -1,14 +1,16 @@
 const crypto = require("crypto");
 const Contest = require("../models/Contest");
+const Problem = require("../models/Problem");
 const Submission = require("../models/Submission");
 const { resolveUserFromAccessToken } = require("../services/authSession");
 const { SUPPORTED_LANGUAGES, runCodeAgainstTestCases } = require("../services/codeRunner");
+const { updateRatingsForContest } = require("../services/ratingService");
 
 const resolveContestUser = resolveUserFromAccessToken;
 const resolveContestCreator = resolveUserFromAccessToken;
 
 const populateContest = (query) =>
-  query.populate("createdBy", "name email").populate("participants.user", "name email");
+  query.populate("createdBy", "name email role").populate("participants.user", "name email");
 
 const findContestByIdentifier = (identifier) => {
   if (!identifier) return null;
@@ -60,13 +62,15 @@ const normalizeQuestions = (questions) =>
     return {
       title: question.title?.trim(),
       prompt: question.prompt?.trim(),
-      timeLimitMs: Number(question.timeLimitMs),
+      timeLimitMs: Number(question.timeLimitMs) || 2000,
+      memoryLimitMb: Number(question.memoryLimitMb) || 256,
       difficulty: question.difficulty || "medium",
       category: question.category?.trim() || "Coding",
       cognitiveCategories: cognitiveCategories.map((c) => c?.trim()).filter(Boolean),
       topics: topics.map((t) => t?.trim()).filter(Boolean),
       tags: tags.map((t) => t?.trim()).filter(Boolean),
       points: Number(question.points) || 100,
+      problemRef: question.problemRef || null,
       testCases: Array.isArray(question.testCases)
         ? question.testCases.map((testCase) => ({
             input: testCase.input?.trim(),
@@ -76,6 +80,78 @@ const normalizeQuestions = (questions) =>
     };
   });
 
+// ─── Scheduled auto-start timers (in-memory) ─────────────────────────────────
+// Cleared when process restarts; contests in "scheduled" state detected on server startup
+const scheduledTimers = new Map();
+
+const scheduleAutoStart = (contest) => {
+  if (!contest.scheduledAt || contest.status !== "scheduled") return;
+
+  const delay = new Date(contest.scheduledAt).getTime() - Date.now();
+  if (delay <= 0) return; // already past — will be caught by listContests
+
+  const contestIdStr = contest._id.toString();
+
+  // Clear any existing timer for this contest
+  if (scheduledTimers.has(contestIdStr)) {
+    clearTimeout(scheduledTimers.get(contestIdStr));
+  }
+
+  const timer = setTimeout(async () => {
+    try {
+      const c = await Contest.findById(contestIdStr);
+      if (!c || c.status !== "scheduled") return;
+      c.status = "live";
+      c.actualStartAt = new Date();
+      c.actualEndAt = new Date(c.actualStartAt.getTime() + c.durationMinutes * 60 * 1000);
+      c.endAt = c.actualEndAt;
+      await c.save();
+      console.log(`[scheduler] Contest "${c.title}" auto-started.`);
+
+      // Schedule auto-end
+      const endDelay = c.actualEndAt.getTime() - Date.now();
+      if (endDelay > 0) {
+        setTimeout(async () => {
+          try {
+            const liveContest = await Contest.findById(contestIdStr);
+            if (!liveContest || liveContest.status !== "live") return;
+            liveContest.status = "ended";
+            liveContest.actualEndAt = new Date();
+            await liveContest.save();
+            await recomputeLeaderboard(liveContest._id);
+            if (liveContest.isOfficial) {
+              updateRatingsForContest(liveContest._id).catch(() => {});
+            }
+            console.log(`[scheduler] Contest "${liveContest.title}" auto-ended.`);
+          } catch (e) {
+            console.error("[scheduler] Auto-end error:", e.message);
+          }
+        }, endDelay);
+      }
+    } catch (e) {
+      console.error("[scheduler] Auto-start error:", e.message);
+    }
+    scheduledTimers.delete(contestIdStr);
+  }, delay);
+
+  scheduledTimers.set(contestIdStr, timer);
+  console.log(`[scheduler] Contest "${contest.title}" scheduled to auto-start in ${Math.round(delay / 60000)} min.`);
+};
+
+// On server startup, reschedule any contests still in "scheduled" state
+const rescheduleOnStartup = async () => {
+  try {
+    const scheduled = await Contest.find({ status: "scheduled", scheduledAt: { $gt: new Date() } });
+    scheduled.forEach(scheduleAutoStart);
+    console.log(`[scheduler] ${scheduled.length} contest(s) rescheduled on startup.`);
+  } catch (e) {
+    console.error("[scheduler] Startup reschedule error:", e.message);
+  }
+};
+
+// Call on module load
+rescheduleOnStartup();
+
 // ─── Leaderboard helpers ──────────────────────────────────────────────────────
 
 const recomputeLeaderboard = async (contestId) => {
@@ -84,9 +160,9 @@ const recomputeLeaderboard = async (contestId) => {
 
   const submissions = await Submission.find({ contest: contestId })
     .populate("user", "name")
-    .sort({ createdAt: 1 }); // oldest first for correct timing
+    .sort({ createdAt: 1 });
 
-  const userMap = {}; // userId -> leaderboard entry
+  const userMap = {};
 
   submissions.forEach((sub) => {
     const uid = sub.user?._id?.toString() || sub.user?.toString();
@@ -109,16 +185,11 @@ const recomputeLeaderboard = async (contestId) => {
     const qKey = String(qIdx);
 
     if (!entry.questionResults[qKey]) {
-      entry.questionResults[qKey] = {
-        solved: false,
-        attempts: 0,
-        solvedAt: null,
-        penaltyMinutes: 0,
-      };
+      entry.questionResults[qKey] = { solved: false, attempts: 0, solvedAt: null, penaltyMinutes: 0 };
     }
 
     const qResult = entry.questionResults[qKey];
-    if (qResult.solved) return; // already solved, skip further submissions
+    if (qResult.solved) return;
 
     qResult.attempts += 1;
 
@@ -126,7 +197,6 @@ const recomputeLeaderboard = async (contestId) => {
       qResult.solved = true;
       qResult.solvedAt = sub.submittedAt || sub.createdAt;
 
-      // Penalty: minutes from contest start + 20 min per WA attempt before AC
       const contestStart = contest.actualStartAt || contest.startAt;
       const solveMinutes = contestStart
         ? Math.floor((new Date(qResult.solvedAt) - new Date(contestStart)) / 60000)
@@ -144,10 +214,12 @@ const recomputeLeaderboard = async (contestId) => {
     }
   });
 
-  // Sort: problems solved desc, then penalty asc
+  // Sort: questions solved desc, then penalty asc, then lastSubmitAt asc
   const leaderboard = Object.values(userMap).sort((a, b) => {
     if (b.questionsSolved !== a.questionsSolved) return b.questionsSolved - a.questionsSolved;
-    return a.penalty - b.penalty;
+    if (a.penalty !== b.penalty) return a.penalty - b.penalty;
+    if (a.lastSubmitAt && b.lastSubmitAt) return new Date(a.lastSubmitAt) - new Date(b.lastSubmitAt);
+    return 0;
   });
 
   leaderboard.forEach((entry, idx) => {
@@ -164,13 +236,12 @@ const recomputeLeaderboard = async (contestId) => {
 const listContests = async (req, res) => {
   try {
     const visibility = req.query.visibility === "private" ? "private" : "public";
-    const tab = req.query.tab || "all"; // upcoming, live, ended, all
+    const tab = req.query.tab || "all";
 
     let statusFilter = {};
     if (tab === "upcoming") statusFilter = { status: { $in: ["scheduled", "ready"] } };
     else if (tab === "live") statusFilter = { status: "live" };
     else if (tab === "ended") statusFilter = { status: "ended" };
-    else statusFilter = {}; // all
 
     const contests = await Contest.find({ visibility, ...statusFilter })
       .select("-roomCode")
@@ -178,7 +249,6 @@ const listContests = async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(50);
 
-    // Group by status for "all" tab
     const grouped = {
       upcoming: contests.filter((c) => c.status === "scheduled" || c.status === "ready"),
       live: contests.filter((c) => c.status === "live"),
@@ -205,17 +275,51 @@ const createContest = async (req, res) => {
       durationMinutes,
       questions,
       scheduledAt,
+      isOfficial = false,
+      existingProblemIds = [], // array of Problem IDs to add from library
     } = req.body;
 
-    if (!title || !durationMinutes || !Array.isArray(questions) || questions.length === 0) {
-      return res.status(400).json({
-        message: "Title, duration, and at least one question are required.",
-      });
+    if (!title || !durationMinutes) {
+      return res.status(400).json({ message: "Title and duration are required." });
+    }
+
+    // Build questions array: merge inline questions + existing problems
+    let builtQuestions = [];
+
+    // Add existing problems from library
+    if (existingProblemIds.length > 0) {
+      const problems = await Problem.find({ _id: { $in: existingProblemIds } });
+      const problemQuestions = problems.map((p) => ({
+        title: p.title,
+        prompt: p.formalStatement || p.statement || "",
+        timeLimitMs: p.timeLimit || 2000,
+        memoryLimitMb: p.memoryLimit || 256,
+        difficulty: p.difficulty || "medium",
+        tags: p.tags || [],
+        topics: p.topics || [],
+        points: p.difficulty === "hard" ? 300 : p.difficulty === "medium" ? 200 : 100,
+        problemRef: p._id,
+        testCases: (p.testCases || []).map((tc) => ({
+          input: tc.input?.trim(),
+          expectedOutput: tc.expectedOutput?.trim(),
+        })),
+      }));
+      builtQuestions.push(...problemQuestions);
+    }
+
+    // Add inline/custom questions
+    if (Array.isArray(questions) && questions.length > 0) {
+      builtQuestions.push(...questions);
+    }
+
+    if (builtQuestions.length === 0) {
+      return res.status(400).json({ message: "At least one question is required." });
     }
 
     const roomCode = await generateContestCode();
-
     const status = scheduledAt ? "scheduled" : "ready";
+    // Only admins can create official contests
+    const canBeOfficial = creator.role === "admin" && isOfficial;
 
     const contest = await Contest.create({
       roomCode,
@@ -223,12 +327,18 @@ const createContest = async (req, res) => {
       description: description.trim(),
       visibility,
       status,
+      isOfficial: canBeOfficial,
       scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
       durationMinutes: Number(durationMinutes),
-      questions: normalizeQuestions(questions),
+      questions: normalizeQuestions(builtQuestions),
       participants: [{ user: creator._id }],
       createdBy: creator._id,
     });
+
+    // Schedule auto-start if contest is scheduled for future
+    if (status === "scheduled") {
+      scheduleAutoStart(contest);
+    }
 
     const populatedContest = await populateContest(Contest.findById(contest._id));
 
@@ -274,9 +384,7 @@ const joinContest = async (req, res) => {
       if (contest.status === "live" && !isOrganizer) {
         return res.status(403).json({ message: "The contest has already started. New participants cannot join." });
       }
-      if (contest.status === "ended") {
-        return res.status(403).json({ message: "The contest has already ended." });
-      }
+      // Allow joining ended contests for upsolving (no leaderboard contribution)
       contest.participants.push({ user: user._id });
       await contest.save();
     }
@@ -322,6 +430,28 @@ const startContest = async (req, res) => {
     contest.endAt = contest.actualEndAt;
     await contest.save();
 
+    // Schedule auto-end
+    const endDelay = contest.actualEndAt.getTime() - Date.now();
+    if (endDelay > 0) {
+      const contestIdStr = contest._id.toString();
+      setTimeout(async () => {
+        try {
+          const liveContest = await Contest.findById(contestIdStr);
+          if (!liveContest || liveContest.status !== "live") return;
+          liveContest.status = "ended";
+          liveContest.actualEndAt = new Date();
+          await liveContest.save();
+          await recomputeLeaderboard(liveContest._id);
+          if (liveContest.isOfficial) {
+            updateRatingsForContest(liveContest._id).catch(() => {});
+          }
+          console.log(`[scheduler] Contest "${liveContest.title}" auto-ended.`);
+        } catch (e) {
+          console.error("[scheduler] Auto-end error:", e.message);
+        }
+      }, endDelay);
+    }
+
     const refreshedContest = await populateContest(Contest.findById(contest._id));
     return res.json({ message: "Contest started.", contest: refreshedContest });
   } catch (error) {
@@ -346,6 +476,13 @@ const endContest = async (req, res) => {
     // Recompute final leaderboard
     await recomputeLeaderboard(contest._id);
 
+    // Update ratings only for official contests (admin-created)
+    if (contest.isOfficial) {
+      updateRatingsForContest(contest._id).catch((e) => {
+        console.error("[ratingService] Rating update error:", e.message);
+      });
+    }
+
     const refreshedContest = await populateContest(Contest.findById(contest._id));
     return res.json({ message: "Contest ended.", contest: refreshedContest });
   } catch (error) {
@@ -358,7 +495,6 @@ const getLeaderboard = async (req, res) => {
     const contest = await getContestOr404(req.params.contestId, res);
     if (!contest) return null;
 
-    // Recompute live leaderboard for live contests, use stored for ended
     let leaderboard;
     if (contest.status === "live" || !contest.leaderboard?.length) {
       leaderboard = await recomputeLeaderboard(contest._id);
@@ -370,6 +506,7 @@ const getLeaderboard = async (req, res) => {
       leaderboard: leaderboard || [],
       contestTitle: contest.title,
       contestStatus: contest.status,
+      isOfficial: contest.isOfficial,
       questions: contest.questions.map((q, i) => ({
         index: i,
         title: q.title,
@@ -394,7 +531,6 @@ const startVirtualContest = async (req, res) => {
       return res.status(400).json({ message: "Virtual contests can only be started for completed contests." });
     }
 
-    // Check if this user already has a virtual for this contest
     const existingVirtual = await Contest.findOne({
       type: "virtual",
       virtualOf: originalContest._id,
@@ -430,11 +566,7 @@ const startVirtualContest = async (req, res) => {
     });
 
     const populated = await populateContest(Contest.findById(virtualContest._id));
-    return res.status(201).json({
-      message: "Virtual contest started.",
-      contest: populated,
-      isNew: true,
-    });
+    return res.status(201).json({ message: "Virtual contest started.", contest: populated, isNew: true });
   } catch (error) {
     return res.status(500).json({ message: "Unable to start virtual contest.", error: error.message });
   }
@@ -459,15 +591,11 @@ const runContestCode = async (req, res) => {
       return res.status(403).json({ message: "Join the contest room before running code." });
     }
 
-    // For virtual contests, allow even after "ended" if user is participant
     const isVirtual = contest.type === "virtual";
-    const isUpsolve = req.body.isUpsolve === true;
+    const isUpsolve = contest.status === "ended" && !isVirtual;
 
     if (!isVirtual && !isUpsolve && contest.status !== "live" && !isOrganizer) {
       return res.status(403).json({ message: "Code execution is available once the contest starts." });
-    }
-    if (!isVirtual && !isUpsolve && contest.status === "ended") {
-      return res.status(403).json({ message: "The contest has ended. Code execution is disabled." });
     }
 
     const { code, language = "cpp", questionIndex = 0, isSubmit = false } = req.body;
@@ -503,10 +631,12 @@ const runContestCode = async (req, res) => {
         language,
         verdict: overallVerdict,
         results: execution.results,
+        // Tag as upsolve so leaderboard is not updated
+        isUpsolve,
       });
 
-      // Recompute leaderboard asynchronously
-      if (contest.status === "live" || isVirtual) {
+      // Only update leaderboard for live or virtual contests (not upsolves)
+      if ((contest.status === "live" || isVirtual) && !isUpsolve) {
         recomputeLeaderboard(contest._id).catch(() => {});
       }
     }
@@ -517,6 +647,7 @@ const runContestCode = async (req, res) => {
       questionIndex: Number(questionIndex),
       results: execution.results,
       terminalOutput: execution.terminalOutput,
+      isUpsolve,
     });
   } catch (error) {
     return res.status(500).json({ message: error.message || "Unable to run code.", error: error.message });

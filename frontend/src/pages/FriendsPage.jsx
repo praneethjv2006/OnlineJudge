@@ -14,7 +14,6 @@ import {
   getSentRequests, getFriendSuggestions,
 } from "../services/friendService";
 import { openDirectChat } from "../services/chatService";
-import FriendProfileModal from "../components/social/FriendProfileModal";
 
 // ─── Tabs ─────────────────────────────────────────────────────────────────────
 const TABS = [
@@ -80,9 +79,18 @@ function FriendCard({ user, onMessage, onViewProfile, onUnfriend }) {
 
   return (
     <div className="friend-card">
-      <Avatar name={user.name} size={48} showDot isOnline={isOnline} />
+      <div style={{ cursor: "pointer" }} onClick={() => onViewProfile(user)} title="View profile">
+        <Avatar name={user.name} size={48} showDot isOnline={isOnline} />
+      </div>
       <div className="friend-card-info" style={{ flex: 1, minWidth: 0 }}>
-        <h4 className="friend-card-name">{user.name}</h4>
+        <h4
+          className="friend-card-name"
+          style={{ cursor: "pointer" }}
+          onClick={() => onViewProfile(user)}
+          title="View profile"
+        >
+          {user.name}
+        </h4>
         <p className="friend-card-email">{user.email}</p>
         <span
           style={{
@@ -176,9 +184,18 @@ function DiscoverCard({ user, onAction }) {
 
   return (
     <div className="friend-card">
-      <Avatar name={user.name} size={48} />
+      <div style={{ cursor: "pointer" }} onClick={() => onAction("profile", user)} title="View profile">
+        <Avatar name={user.name} size={48} />
+      </div>
       <div className="friend-card-info" style={{ flex: 1, minWidth: 0 }}>
-        <h4 className="friend-card-name">{user.name}</h4>
+        <h4
+          className="friend-card-name"
+          style={{ cursor: "pointer" }}
+          onClick={() => onAction("profile", user)}
+          title="View profile"
+        >
+          {user.name}
+        </h4>
         <p className="friend-card-email">{user.email}</p>
         {user.mutualCount > 0 && (
           <span className="friend-mutual-badge">
@@ -311,6 +328,10 @@ function FriendsPage() {
 
   // ─── Discover actions ────────────────────────────────────────────────────────
   const handleDiscoverAction = async (action, u) => {
+    if (action === "profile") {
+      navigate(`/profile/${u._id}`);
+      return;
+    }
     try {
       const updateFriend = (fn) => {
         setSearchResults((p) => fn(p));
@@ -563,7 +584,7 @@ function FriendsPage() {
                           key={u._id}
                           user={u}
                           onMessage={handleOpenMessage}
-                          onViewProfile={setProfileFriend}
+                          onViewProfile={(target) => navigate(`/profile/${target._id}`)}
                           onUnfriend={handleUnfriend}
                         />
                       ))}
@@ -640,22 +661,6 @@ function FriendsPage() {
           )}
         </div>
       </div>
-
-      {/* Friend Profile Modal */}
-      {profileFriend && (
-        <FriendProfileModal
-          friend={profileFriend}
-          onClose={() => setProfileFriend(null)}
-          onMessage={(convId) => {
-            setProfileFriend(null);
-            navigate("/messages", { state: { conversationId: convId } });
-          }}
-          onUnfriend={(friendId) => {
-            setFriends((p) => p.filter((f) => f._id !== friendId));
-            setProfileFriend(null);
-          }}
-        />
-      )}
     </>
   );
 }

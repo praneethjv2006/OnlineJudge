@@ -1,21 +1,43 @@
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { useGLTF, useAnimations, Environment, OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
+import { getCachedModelUrl } from "../utils/modelCache";
 
-// ─── 3D Model Configuration (Tweak values here) ─────────────────────────────
+// ─── 3D Model Performance & Caching Configuration ───────────────────────────
+THREE.Cache.enabled = true;
+const MODEL_ORIGINAL_URL = "/ninja_animation.glb";
+useGLTF.preload(MODEL_ORIGINAL_URL);
+
 const NINJA_SCALE = 2.5;             // Size/scale of the 3D model
 const NINJA_ANIMATION_SPEED = 0.9;  // Speed of the animation (1.0 = normal, smaller = slower)
 const NINJA_PAUSE_SECONDS = 0;     // Seconds to pause before restarting the animation
 
-/* ── GLB Ninja Model with animations ────────────────────────────────────── */
+// ─── Japanese/Chinese characters for matrix rain ─────────────────────────────
+const MATRIX_CHARS = "忍道影闇剣謎力術武侍龍神鬼刀弓炎水風雷夢魂禅虎鷹桜雪月星空命火水木金土日本語漢字あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん";
+
+/* ── Optimized GLB Ninja Model with animations ──────────────────────────── */
 function NinjaModel({ url }) {
   const groupRef = useRef();
   const { scene, animations } = useGLTF(url);
   const { actions, names } = useAnimations(animations, groupRef);
 
-  // Play the first available animation slower, with a pause before loops
+  // Mesh traversal optimization: frustum culling & disable redundant shadow passes
+  useEffect(() => {
+    if (!scene) return;
+    scene.traverse((child) => {
+      if (child.isMesh) {
+        child.frustumCulled = true;
+        child.castShadow = false;
+        child.receiveShadow = false;
+        if (child.material) {
+          child.material.precision = "mediump";
+        }
+      }
+    });
+  }, [scene]);
+
   useEffect(() => {
     if (names.length > 0) {
       const action = actions[names[0]];
@@ -23,16 +45,14 @@ function NinjaModel({ url }) {
         action.reset().play();
         action.setLoop(THREE.LoopOnce, 1);
         action.clampWhenFinished = true;
-        action.timeScale = NINJA_ANIMATION_SPEED; // Slow down the animation speed
+        action.timeScale = NINJA_ANIMATION_SPEED;
 
         const mixer = action.getMixer();
         const handleFinished = (e) => {
           if (e.action === action) {
             setTimeout(() => {
-              if (action) {
-                action.reset().play();
-              }
-            }, NINJA_PAUSE_SECONDS * 1000); // Wait configured seconds before repeating the animation
+              if (action) action.reset().play();
+            }, NINJA_PAUSE_SECONDS * 1000);
           }
         };
 
@@ -45,7 +65,6 @@ function NinjaModel({ url }) {
     }
   }, [actions, names]);
 
-  // Gentle idle float only when no animations exist to avoid overlapping rotations
   useFrame((state) => {
     if (names.length === 0 && groupRef.current) {
       groupRef.current.position.y = Math.sin(state.clock.elapsedTime * 0.8) * 0.06;
@@ -65,7 +84,7 @@ function NinjaModel({ url }) {
   );
 }
 
-/* ── Fallback SVG ninja when GLB is loading ─────────────────────────────── */
+/* ── Fallback SVG ninja ─────────────────────────────────────────────────── */
 function FallbackNinja() {
   return (
     <div className="sc-ninja-wrapper" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -90,30 +109,49 @@ function FallbackNinja() {
   );
 }
 
-/* ── 3D Canvas scene ─────────────────────────────────────────────────────── */
+/* ── Optimized 3D Canvas scene with Caching & Clamped DPR ─────────────────── */
 function NinjaScene() {
+  const [modelUrl, setModelUrl] = useState(MODEL_ORIGINAL_URL);
+
+  useEffect(() => {
+    // Resolve cached Object URL from CacheStorage / memory
+    let active = true;
+    getCachedModelUrl(MODEL_ORIGINAL_URL).then((url) => {
+      if (active && url) {
+        setModelUrl(url);
+      }
+    });
+    return () => { active = false; };
+  }, []);
+
+  const dpr = useMemo(() => {
+    const ratio = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
+    return [1, Math.min(ratio, 1.5)];
+  }, []);
+
   return (
     <Canvas
       camera={{ position: [0, 0.8, 5.0], fov: 50 }}
       style={{ width: "100%", height: "100%", background: "transparent" }}
-      gl={{ alpha: true, antialias: true }}
+      dpr={dpr}
+      gl={{
+        alpha: true,
+        antialias: true,
+        powerPreference: "high-performance",
+        stencil: false,
+        depth: true,
+      }}
     >
       <ambientLight intensity={0.4} />
-      <directionalLight
-        position={[5, 8, 5]}
-        intensity={1.2}
-        castShadow={false}
-      />
-      {/* Accent orange point light to match theme */}
+      <directionalLight position={[5, 8, 5]} intensity={1.2} castShadow={false} />
       <pointLight position={[-3, 2, 2]} intensity={1.5} color="#ffa116" />
       <pointLight position={[3, -1, 2]} intensity={0.6} color="#ff6d00" />
 
       <Suspense fallback={null}>
-        <NinjaModel url="/ninja_animation.glb" />
+        <NinjaModel url={modelUrl} />
         <Environment preset="night" />
       </Suspense>
 
-      {/* Manual rotation controls — autoRotate disabled */}
       <OrbitControls
         enableZoom={false}
         enablePan={false}
@@ -127,19 +165,91 @@ function NinjaScene() {
   );
 }
 
+/* ── Matrix Rain Canvas (tuned speed & frequency) ────────────────────────── */
+function MatrixRain() {
+  const canvasRef = useRef(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+
+    const resize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    resize();
+    window.addEventListener("resize", resize);
+
+    const FONT_SIZE = 15;
+    const getColumns = () => Math.floor(canvas.width / FONT_SIZE);
+
+    let columns = getColumns();
+    // Slightly reduced frequency by starting columns with wider random negative offsets
+    let drops = Array.from({ length: columns }, () => Math.random() * -70);
+
+    const draw = () => {
+      // Fade trail
+      ctx.fillStyle = "rgba(5, 5, 5, 0.065)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      columns = getColumns();
+      while (drops.length < columns) drops.push(Math.random() * -70);
+
+      for (let i = 0; i < drops.length; i++) {
+        const char = MATRIX_CHARS[Math.floor(Math.random() * MATRIX_CHARS.length)];
+        const x = i * FONT_SIZE;
+        const y = drops[i] * FONT_SIZE;
+
+        // Leading character — brighter gold
+        const intensity = Math.random();
+        if (intensity > 0.91) {
+          ctx.fillStyle = `rgba(255, 235, 120, ${0.9 + Math.random() * 0.1})`; // gold head
+        } else if (intensity > 0.68) {
+          ctx.fillStyle = `rgba(255, 161, 22, ${0.55 + Math.random() * 0.3})`; // vibrant orange mid
+        } else {
+          ctx.fillStyle = `rgba(255, 110, 0, ${0.15 + Math.random() * 0.2})`; // amber tail
+        }
+
+        ctx.font = `${FONT_SIZE}px 'Noto Sans JP', 'MS Gothic', monospace`;
+        ctx.fillText(char, x, y);
+
+        // Reset column at slightly reduced frequency
+        if (y > canvas.height && Math.random() > 0.982) {
+          drops[i] = 0;
+        }
+        // Slightly reduced speed (fast, but controlled: 0.42 to 0.65)
+        drops[i] += 0.42 + Math.random() * 0.23;
+      }
+    };
+
+    const interval = setInterval(draw, 50);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("resize", resize);
+    };
+  }, []);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="sc-matrix-canvas"
+      aria-hidden="true"
+    />
+  );
+}
+
 /* ── Floating ambient particle ───────────────────────────────────────────── */
 function Particle({ style }) {
   return <div className="sc-particle" style={style} />;
 }
-
-const KANJI = ["忍", "道", "影", "闇", "剣", "謎", "力", "術"];
 
 /* ── Main page ───────────────────────────────────────────────────────────── */
 export default function ShadowCodePage() {
   const navigate = useNavigate();
   const [revealed, setRevealed] = useState(false);
   const [particles, setParticles] = useState([]);
-  const containerRef = useRef(null);
 
   useEffect(() => {
     const timer = setTimeout(() => setRevealed(true), 200);
@@ -147,7 +257,7 @@ export default function ShadowCodePage() {
   }, []);
 
   useEffect(() => {
-    const generated = Array.from({ length: 28 }, (_, i) => ({
+    const generated = Array.from({ length: 20 }, (_, i) => ({
       id: i,
       left: `${Math.random() * 100}%`,
       animationDelay: `${Math.random() * 6}s`,
@@ -162,7 +272,10 @@ export default function ShadowCodePage() {
   const handleEnterDojo = () => navigate("/shadow-code/dojo");
 
   return (
-    <div className="sc-landing" ref={containerRef}>
+    <div className="sc-landing">
+      {/* Matrix rain canvas background */}
+      <MatrixRain />
+
       {/* Fog layers */}
       <div className="sc-fog sc-fog-1" />
       <div className="sc-fog sc-fog-2" />
@@ -182,24 +295,6 @@ export default function ShadowCodePage() {
           }}
         />
       ))}
-
-      {/* Kanji watermarks */}
-      <div className="sc-kanji-bg" aria-hidden="true">
-        {KANJI.map((k, i) => (
-          <span
-            key={i}
-            className="sc-kanji"
-            style={{
-              left: `${8 + i * 12}%`,
-              top: `${10 + (i % 3) * 30}%`,
-              animationDelay: `${i * 0.5}s`,
-              fontSize: `${3 + (i % 3) * 1.5}rem`,
-            }}
-          >
-            {k}
-          </span>
-        ))}
-      </div>
 
       {/* Radial glow behind ninja */}
       <div className="sc-ninja-glow" />
@@ -248,6 +343,14 @@ export default function ShadowCodePage() {
           <p className="sc-disclaimer">
             10 categories of surprise challenges await inside.
           </p>
+
+          {/* Next section hint */}
+          <button className="sc-scroll-hint" onClick={handleEnterDojo} aria-label="Enter dojo">
+            <span className="sc-scroll-hint-label">Enter the Dojo</span>
+            <div className="sc-scroll-arrow">
+              <div className="sc-scroll-arrow-icon" />
+            </div>
+          </button>
         </div>
       </div>
 

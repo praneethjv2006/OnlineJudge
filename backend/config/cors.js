@@ -14,17 +14,18 @@ const normaliseOrigin = (value) => {
 const getAllowedOrigins = (env = process.env) => {
   const configuredOrigins = env.CLIENT_URLS || env.CLIENT_URL;
 
-  if (!configuredOrigins) {
-    return new Set(LOCAL_DEVELOPMENT_ORIGINS);
-  }
+  const allowed = new Set(LOCAL_DEVELOPMENT_ORIGINS);
 
-  return new Set(
+  if (configuredOrigins) {
     configuredOrigins
       .split(",")
       .map((origin) => origin.trim())
       .filter(Boolean)
       .map(normaliseOrigin)
-  );
+      .forEach((origin) => allowed.add(origin));
+  }
+
+  return allowed;
 };
 
 const createCorsOptions = (env = process.env) => {

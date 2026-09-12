@@ -270,10 +270,11 @@ function ContestRoomPage() {
   const currentQuestion = contest?.questions?.[selectedQuestionIndex];
   const isLive = contest?.status === "live";
   const isEnded = contest?.status === "ended";
+  const isScheduled = contest?.status === "scheduled";
   const isVirtual = contest?.type === "virtual";
   const liveDeadline = contest?.actualEndAt || contest?.endAt;
-  // For virtual or upsolve mode, allow running/submitting
-  const canRun = isVirtual || !isEnded;
+  // Allow running code in live contests, virtual contests, and upsolve (ended) mode
+  const canRun = isLive || isVirtual || isEnded;
 
   const handleRunTestCases = async () => {
     if (!currentQuestion || !canRun) return;
@@ -528,10 +529,23 @@ function ContestRoomPage() {
         <div className="header-center">
           <div className="timer-display">
             <Clock size={16} />
-            <span className={isLive ? "timer-live" : ""}>
-              {formatCountdown(liveDeadline, nowTick)}
-            </span>
+            {isScheduled ? (
+              <span style={{ color: "var(--accent)", fontSize: "0.82rem" }}>
+                Starts {contest.scheduledAt ? new Date(contest.scheduledAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "soon"}
+              </span>
+            ) : isEnded ? (
+              <span style={{ color: "var(--muted)", fontSize: "0.82rem" }}>Contest Ended</span>
+            ) : (
+              <span className={isLive ? "timer-live" : ""}>
+                {formatCountdown(liveDeadline, nowTick)}
+              </span>
+            )}
           </div>
+          {contest?.isOfficial && (
+            <span className="official-badge">
+              ★ Official
+            </span>
+          )}
         </div>
 
         <div className="header-right">
@@ -734,7 +748,17 @@ function ContestRoomPage() {
             {isEnded && contest.type !== 'virtual' && (
               <div className="upsolve-banner">
                 <CheckCircle2 size={14} />
-                <span>Contest ended — you can still upsolve problems</span>
+                <span>Contest ended — upsolve mode active · submissions won't affect the leaderboard</span>
+              </div>
+            )}
+            {isScheduled && (
+              <div className="scheduled-banner">
+                <Clock size={14} />
+                <span>
+                  Contest is scheduled to start at{" "}
+                  <strong>{contest.scheduledAt ? new Date(contest.scheduledAt).toLocaleString() : "TBD"}</strong>
+                  {contest.createdBy?._id === user?.id && " — You can also start it manually"}
+                </span>
               </div>
             )}
             <div className="panel-tabs">

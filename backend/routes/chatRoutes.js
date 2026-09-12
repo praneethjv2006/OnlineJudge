@@ -5,6 +5,7 @@ const {
   createGroup,
   addGroupMember,
   getMessages,
+  markConversationSeen,
   sendMessage,
   deleteMessage,
   toggleReaction,
@@ -20,8 +21,9 @@ router.post("/conversations/group", createGroup);
 router.patch("/conversations/group/:id/add", addGroupMember);
 router.post("/conversations/group/:id/leave", leaveGroup);
 
-// Messages
+// Messages & Seen Status
 router.get("/conversations/:id/messages", getMessages);
+router.post("/conversations/:id/seen", markConversationSeen);
 router.post("/conversations/:id/messages", sendMessage);
 router.delete("/conversations/:id/messages/:msgId", deleteMessage);
 router.post("/conversations/:id/messages/:msgId/react", toggleReaction);

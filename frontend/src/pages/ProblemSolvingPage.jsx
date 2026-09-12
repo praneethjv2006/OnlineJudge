@@ -959,6 +959,7 @@ function ProblemSolvingPage() {
                     automaticLayout: true,
                     wordWrap: "off",
                     renderLineHighlight: "line",
+                    padding: { top: 16, bottom: 16 },
                   }}
                 />
               </div>

@@ -3,13 +3,13 @@ import { useLocation, useNavigate } from "react-router-dom";
 import {
   Send, X, Hash, Users, MessageSquare, Plus, Clock, Code2,
   ChevronDown, AlertCircle, Trash2, Search, Smile, CornerUpLeft,
-  Info, LogOut, ChevronRight
+  Info, LogOut, ChevronRight, User, ExternalLink, Check, CheckCheck
 } from "lucide-react";
 import { useAppContext } from "../App";
 import { toast } from "../components/common/Toast";
 import {
   getConversations, getMessages, sendMessage, deleteMessage, createGroupChat,
-  toggleReaction, leaveGroup,
+  toggleReaction, leaveGroup, markConversationSeen, openDirectChat,
 } from "../services/chatService";
 import { getMyFriends } from "../services/friendService";
 import data from "@emoji-mart/data";
@@ -18,6 +18,29 @@ import Modal from "../components/common/Modal";
 
 // ─── Quick emoji set ──────────────────────────────────────────────────────────
 const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🔥", "🎉", "👏"];
+
+// ─── Status Ticks (Clean vector double-check) ─────────────────────────────────
+function MessageStatusTick({ isOptimistic, isSeen }) {
+  if (isOptimistic) {
+    return (
+      <span className="msg-tick msg-tick-pending" title="Sending...">
+        <Check size={13} strokeWidth={2.4} color="var(--color-text-muted)" />
+      </span>
+    );
+  }
+  if (isSeen) {
+    return (
+      <span className="msg-tick msg-tick-seen" title="Read by recipient">
+        <CheckCheck size={15} strokeWidth={2.4} color="#38bdf8" />
+      </span>
+    );
+  }
+  return (
+    <span className="msg-tick msg-tick-saved" title="Saved on server">
+      <CheckCheck size={15} strokeWidth={2.4} color="rgba(255, 255, 255, 0.45)" />
+    </span>
+  );
+}
 
 // ─── 48-hour countdown hook ───────────────────────────────────────────────────
 function useCountdown(expiresAt) {
@@ -73,6 +96,11 @@ function MessageBubble({ message, isMe, onDelete, onReply, onReact, currentUserI
     return null;
   }, [reactionsMap, currentUserId]);
 
+  const isSeen =
+    message.status === "seen" ||
+    (Array.isArray(message.seenBy) &&
+      message.seenBy.some((id) => String(id?._id || id) !== String(currentUserId)));
+
   return (
     <div className={`msg-bubble-wrapper ${isMe ? "msg-mine" : "msg-theirs"}`}>
       {!isMe && (
@@ -85,20 +113,20 @@ function MessageBubble({ message, isMe, onDelete, onReply, onReact, currentUserI
           <span className="msg-sender-name">{message.sender?.name}</span>
         )}
 
-        {/* Reply quote */}
-        {message.replyTo?.messageId && (
-          <div className="msg-reply-quote">
-            <div className="msg-reply-bar" />
-            <div className="msg-reply-content">
-              <span className="msg-reply-sender">{message.replyTo.senderName}</span>
-              <span className="msg-reply-preview">
-                {message.replyTo.type === "code" ? "📋 Code snippet" : message.replyTo.preview}
-              </span>
-            </div>
-          </div>
-        )}
-
         <div className={`msg-bubble ${message.type === "code" ? "msg-bubble-code" : ""}`}>
+          {/* Quoted reply card inside bubble */}
+          {message.replyTo?.messageId && (
+            <div className="msg-reply-quote">
+              <div className="msg-reply-bar" />
+              <div className="msg-reply-content">
+                <span className="msg-reply-sender">{message.replyTo.senderName}</span>
+                <span className="msg-reply-preview">
+                  {message.replyTo.type === "code" ? "📋 Code snippet" : message.replyTo.preview}
+                </span>
+              </div>
+            </div>
+          )}
+
           {message.type === "code" ? (
             <pre className="msg-code-block">
               <code>{message.content}</code>
@@ -106,6 +134,21 @@ function MessageBubble({ message, isMe, onDelete, onReply, onReact, currentUserI
           ) : (
             <p className="msg-text">{message.content}</p>
           )}
+
+          {/* WhatsApp time & tick mark embedded at bottom right of bubble */}
+          <div className="msg-meta">
+            <span className="msg-time">
+              {new Date(message.createdAt).toLocaleTimeString("en-US", {
+                hour: "2-digit", minute: "2-digit", hour12: false
+              })}
+            </span>
+            {isMe && (
+              <MessageStatusTick
+                isOptimistic={message.isOptimistic}
+                isSeen={isSeen}
+              />
+            )}
+          </div>
         </div>
 
         {/* Reactions display */}
@@ -125,22 +168,6 @@ function MessageBubble({ message, isMe, onDelete, onReply, onReact, currentUserI
             ))}
           </div>
         )}
-
-        <div className="msg-meta">
-          <span className="msg-time">
-            {new Date(message.createdAt).toLocaleTimeString("en-US", {
-              hour: "2-digit", minute: "2-digit", hour12: false
-            })}
-          </span>
-          {isMe && (
-            <span
-              className={`msg-status ${message.isOptimistic ? "msg-status-sending" : "msg-status-delivered"}`}
-              title={message.isOptimistic ? "Sending..." : "Delivered"}
-            >
-              {message.isOptimistic ? "✓" : "✓✓"}
-            </span>
-          )}
-        </div>
 
         {/* Hover actions */}
         <div className={`msg-hover-actions ${isMe ? "msg-hover-mine" : "msg-hover-theirs"}`}>
@@ -190,10 +217,10 @@ function MessageBubble({ message, isMe, onDelete, onReply, onReact, currentUserI
   );
 }
 
-// ─── Conversation List Item ───────────────────────────────────────────────────
-function ConvItem({ conv, isActive, onClick, currentUserId, unread }) {
+// ─── Conversation List Item with Notification Dot ─────────────────────────────
+function ConvItem({ conv, isActive, onClick, currentUserId, unread, onViewProfile }) {
   const other = conv.type === "direct"
-    ? conv.participants?.find((p) => p._id !== currentUserId && p._id?.toString() !== currentUserId)
+    ? conv.participants?.find((p) => String(p._id) !== String(currentUserId))
     : null;
   const displayName = conv.type === "group" ? conv.groupName : other?.name || "Unknown";
   const initial = displayName?.[0]?.toUpperCase() || "?";
@@ -202,12 +229,24 @@ function ConvItem({ conv, isActive, onClick, currentUserId, unread }) {
     ? new Date(conv.lastMessage.at).toLocaleDateString("en-US", { month: "short", day: "numeric" })
     : "";
 
+  const hasUnread = unread > 0 || conv.hasUnread || (conv.unreadCount && conv.unreadCount > 0);
+
   return (
     <button
       className={`conv-item ${isActive ? "conv-item-active" : ""}`}
       onClick={onClick}
     >
-      <div className="conv-avatar">
+      <div
+        className="conv-avatar"
+        onClick={(e) => {
+          if (other?._id && onViewProfile) {
+            e.stopPropagation();
+            onViewProfile(other._id);
+          }
+        }}
+        title={other?._id ? `View ${displayName}'s profile` : ""}
+        style={{ cursor: other?._id ? "pointer" : "default" }}
+      >
         {conv.type === "group" ? <Users size={18} /> : initial}
       </div>
       <div className="conv-item-body">
@@ -215,11 +254,18 @@ function ConvItem({ conv, isActive, onClick, currentUserId, unread }) {
           <span className="conv-item-name">{displayName}</span>
           <span className="conv-item-date">{previewDate}</span>
         </div>
-        <p className="conv-item-preview">{preview.slice(0, 60)}{preview.length > 60 ? "…" : ""}</p>
+        <div className="conv-item-bottom">
+          <p className="conv-item-preview">{preview.slice(0, 50)}{preview.length > 50 ? "…" : ""}</p>
+          {hasUnread && (
+            <div className="conv-red-dot-wrapper">
+              <span className="conv-red-dot" title="New unread message" />
+              {conv.unreadCount > 1 && (
+                <span className="conv-unread-count">{conv.unreadCount}</span>
+              )}
+            </div>
+          )}
+        </div>
       </div>
-      {unread > 0 && (
-        <span className="conv-unread-badge">{unread > 9 ? "9+" : unread}</span>
-      )}
     </button>
   );
 }
@@ -523,6 +569,10 @@ function MessagesPage() {
       else setMessages((prev) => [...(data.messages || []), ...prev]);
       setMsgPage(page);
       setMsgHasMore(data.hasMore || false);
+      markConversationSeen(convId).catch(() => {});
+      setConversations((prev) =>
+        prev.map((c) => (c._id === convId ? { ...c, unreadCount: 0, hasUnread: false } : c))
+      );
     } catch { /* silent */ }
     setIsLoadingMsgs(false);
   };
@@ -537,6 +587,7 @@ function MessagesPage() {
         setMessages(newMsgs);
         if (newMsgs.length > 0 && convId === activeConvId) {
           updateLastReadTime(convId);
+          markConversationSeen(convId).catch(() => {});
         }
       } catch { /* silent */ }
     }, 5000);
@@ -555,6 +606,10 @@ function MessagesPage() {
     setMsgSearchQuery("");
     setShowMsgSearch(false);
     updateLastReadTime(convId);
+    markConversationSeen(convId).catch(() => {});
+    setConversations((prev) =>
+      prev.map((c) => (c._id === convId ? { ...c, unreadCount: 0, hasUnread: false } : c))
+    );
   };
 
   const handleSend = async () => {
@@ -751,6 +806,31 @@ function MessagesPage() {
     });
   }, [conversations, convSearch, currentUserId]);
 
+  // Friends matching the search query to start new chats
+  const searchableFriends = useMemo(() => {
+    if (!convSearch.trim()) return [];
+    const q = convSearch.toLowerCase();
+    return friends.filter(
+      (f) =>
+        f?.name?.toLowerCase().includes(q) || f?.email?.toLowerCase().includes(q)
+    );
+  }, [friends, convSearch]);
+
+  const handleStartChatWithFriend = async (friendId) => {
+    try {
+      const data = await openDirectChat(friendId);
+      const conversation = data.conversation;
+      setConversations((prev) => {
+        const exists = prev.some((c) => c._id === conversation._id);
+        return exists ? prev : [conversation, ...prev];
+      });
+      setActiveConvId(conversation._id);
+      setConvSearch("");
+    } catch (err) {
+      toast.error("Failed to open chat with friend.");
+    }
+  };
+
   return (
     <div className="messages-layout">
       {/* ── Left Sidebar: Conversation List ── */}
@@ -758,7 +838,7 @@ function MessagesPage() {
         <div className="conv-sidebar-header">
           <h2 className="conv-sidebar-title">
             <MessageSquare size={20} />
-            Messages
+            Chats
           </h2>
           <button
             className="conv-new-group-btn"
@@ -769,28 +849,36 @@ function MessagesPage() {
           </button>
         </div>
 
-        {/* Conversation search */}
+        {/* Conversation search (WhatsApp style) */}
         <div className="conv-search-bar">
           <Search size={14} className="conv-search-icon" />
           <input
             className="conv-search-input"
-            placeholder="Search conversations…"
+            placeholder="Search or start new chat"
             value={convSearch}
             onChange={(e) => setConvSearch(e.target.value)}
           />
+          {convSearch && (
+            <button
+              onClick={() => setConvSearch("")}
+              style={{ background: "none", border: "none", cursor: "pointer", color: "var(--wa-text-secondary, #8696a0)" }}
+            >
+              <X size={14} />
+            </button>
+          )}
         </div>
 
         <div className="conv-sidebar-hint">
           <AlertCircle size={13} />
-          Messages expire in 48 hours
+          Messages disappear after 48 hours
         </div>
 
         <div className="conv-list">
-          {filteredConversations.length === 0 ? (
+          {filteredConversations.length === 0 && searchableFriends.length === 0 ? (
             <div className="conv-empty">
               <MessageSquare size={32} />
               {convSearch ? (
-                <p>No conversations found.</p>
+                <p>No chats or contacts found for &ldquo;{convSearch}&rdquo;.</p>
               ) : (
                 <>
                   <p>No conversations yet.</p>
@@ -799,24 +887,64 @@ function MessagesPage() {
               )}
             </div>
           ) : (
-            filteredConversations.map((conv) => {
-              const lastRead = lastReadTimes[conv._id];
-              const isUnread =
-                conv.lastMessage?.at &&
-                String(conv.lastMessage.sender?._id || conv.lastMessage.sender) !== String(currentUserId) &&
-                (!lastRead || new Date(conv.lastMessage.at) > new Date(lastRead));
+            <>
+              {filteredConversations.map((conv) => {
+                const lastRead = lastReadTimes[conv._id];
+                const isUnread =
+                  conv.hasUnread ||
+                  (conv.unreadCount && conv.unreadCount > 0) ||
+                  (conv.lastMessage?.at &&
+                    String(conv.lastMessage.sender?._id || conv.lastMessage.sender) !== String(currentUserId) &&
+                    (!lastRead || new Date(conv.lastMessage.at) > new Date(lastRead)));
 
-              return (
-                <ConvItem
-                  key={conv._id}
-                  conv={conv}
-                  isActive={conv._id === activeConvId}
-                  onClick={() => handleSelectConv(conv._id)}
-                  currentUserId={currentUserId}
-                  unread={isUnread ? 1 : 0}
-                />
-              );
-            })
+                return (
+                  <ConvItem
+                    key={conv._id}
+                    conv={conv}
+                    isActive={conv._id === activeConvId}
+                    onClick={() => handleSelectConv(conv._id)}
+                    currentUserId={currentUserId}
+                    unread={isUnread ? 1 : 0}
+                    onViewProfile={(uid) => navigate(`/profile/${uid}`)}
+                  />
+                );
+              })}
+
+              {/* Start Chat with Friend section when searching */}
+              {searchableFriends.length > 0 && (
+                <div className="conv-friends-search-section">
+                  <div className="conv-friends-search-header">
+                    <Users size={13} />
+                    <span>Contacts ({searchableFriends.length})</span>
+                  </div>
+                  {searchableFriends.map((f) => (
+                    <button
+                      key={f._id}
+                      className="conv-item conv-friend-search-item"
+                      onClick={() => handleStartChatWithFriend(f._id)}
+                    >
+                      <div
+                        className="conv-avatar"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/profile/${f._id}`);
+                        }}
+                        title={`View ${f.name}'s profile`}
+                      >
+                        {f.name?.[0]?.toUpperCase() || "?"}
+                      </div>
+                      <div className="conv-item-body">
+                        <div className="conv-item-top">
+                          <span className="conv-item-name">{f.name}</span>
+                          <span className="conv-chat-badge">+ Chat</span>
+                        </div>
+                        <p className="conv-item-preview">{f.email}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
       </aside>
@@ -825,70 +953,87 @@ function MessagesPage() {
       <main className="msg-thread-area">
         {!activeConvId ? (
           <div className="msg-empty-state">
-            <MessageSquare size={60} />
-            <h3>Select a conversation</h3>
-            <p>Choose a chat from the left, or start messaging a friend.</p>
+            <MessageSquare size={54} style={{ color: "var(--accent)" }} />
+            <h3>Friend Messages & Collaboration</h3>
+            <p>Select a friend or search contacts to share code, discuss algorithmic problems, and collaborate.</p>
           </div>
         ) : (
           <>
             {/* Thread Header */}
-            <div className="msg-thread-header">
-              <div className="msg-thread-identity">
-                <div className="msg-thread-avatar">
-                  {activeConv?.type === "group"
-                    ? <Users size={20} />
-                    : convDisplayName(activeConv)?.[0]?.toUpperCase() || "?"}
-                </div>
-                <div>
-                  <button
-                    className={`msg-thread-name-btn ${activeConv?.type === "group" ? "msg-thread-name-clickable" : ""}`}
-                    onClick={() => activeConv?.type === "group" && setShowGroupInfo((c) => !c)}
-                    style={{ background: "none", border: "none", cursor: activeConv?.type === "group" ? "pointer" : "default", padding: 0 }}
+            {(() => {
+              const otherUser = activeConv?.type === "direct"
+                ? activeConv.participants?.find((p) => String(p._id) !== String(currentUserId))
+                : null;
+              return (
+                <div className="msg-thread-header">
+                  <div
+                    className="msg-thread-identity"
+                    onClick={() => {
+                      if (activeConv?.type === "group") {
+                        setShowGroupInfo((c) => !c);
+                      } else if (otherUser?._id) {
+                        navigate(`/profile/${otherUser._id}`);
+                      }
+                    }}
+                    style={{ cursor: otherUser?._id || activeConv?.type === "group" ? "pointer" : "default" }}
+                    title={otherUser?._id ? "Click to view full profile" : ""}
                   >
-                    <h3 className="msg-thread-name">{convDisplayName(activeConv)}</h3>
-                  </button>
-                  {activeConv?.type === "group" && (
-                    <p className="msg-thread-sub">
-                      {activeConv?.participants?.length} members
+                    <div className="msg-thread-avatar">
+                      {activeConv?.type === "group"
+                        ? <Users size={20} />
+                        : convDisplayName(activeConv)?.[0]?.toUpperCase() || "?"}
+                    </div>
+                    <div>
+                      <h3 className="msg-thread-name">{convDisplayName(activeConv)}</h3>
+                      <p className="msg-thread-sub">
+                        {activeConv?.type === "group" ? (
+                          <>
+                            {activeConv?.participants?.length} members
+                            <button
+                              className="msg-group-info-btn"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setShowGroupInfo((c) => !c);
+                              }}
+                              title="Group info"
+                            >
+                              <Info size={13} />
+                            </button>
+                          </>
+                        ) : (
+                          <span className="msg-status-online">online • click for profile</span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="msg-header-actions" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    {otherUser?._id && (
                       <button
-                        className="msg-group-info-btn"
-                        onClick={() => setShowGroupInfo((c) => !c)}
-                        title="Group info"
+                        className="msg-header-icon-btn"
+                        title="View Full Profile"
+                        onClick={() => navigate(`/profile/${otherUser._id}`)}
                       >
-                        <Info size={13} />
+                        <User size={17} />
                       </button>
-                    </p>
-                  )}
+                    )}
+                    <button
+                      className={`msg-header-action-btn ${showMsgSearch ? "active" : ""}`}
+                      onClick={() => {
+                        setShowMsgSearch(!showMsgSearch);
+                        if (showMsgSearch) setMsgSearchQuery("");
+                      }}
+                      title="Search messages"
+                    >
+                      <Search size={18} />
+                    </button>
+                    <div className="msg-thread-ttl-hint">
+                      <Clock size={13} />
+                      48h TTL
+                    </div>
+                  </div>
                 </div>
-              </div>
-              <div className="msg-header-actions" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                <button
-                  className={`msg-header-action-btn ${showMsgSearch ? "active" : ""}`}
-                  onClick={() => {
-                    setShowMsgSearch(!showMsgSearch);
-                    if (showMsgSearch) setMsgSearchQuery("");
-                  }}
-                  title="Search messages"
-                  style={{
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    color: showMsgSearch ? "var(--color-accent)" : "var(--color-text-muted)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    padding: "4px"
-                  }}
-                >
-                  <Search size={18} />
-                </button>
-
-                <div className="msg-thread-ttl-hint">
-                  <Clock size={14} />
-                  Auto-delete in 48h
-                </div>
-              </div>
-            </div>
+              );
+            })()}
 
             {showMsgSearch && (
               <div className="msg-thread-search-bar" style={{

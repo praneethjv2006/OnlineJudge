@@ -92,19 +92,32 @@
   inset: 0;
   pointer-events: none;
   overflow: hidden;
+  z-index: 2;
 }
 
-.sc-kanji {
+.sc-floating-char {
   position: absolute;
-  color: rgba(255, 161, 22, 0.04);
+  font-family: "Noto Serif JP", "Noto Sans JP", "Hiragino Mincho ProN", "Songti SC", serif;
   font-weight: 900;
-  animation: sc-kanji-pulse 6s ease-in-out infinite;
+  line-height: 1;
   user-select: none;
+  pointer-events: none;
+  color: #ffa116;
+  text-shadow: 0 0 25px rgba(255, 161, 22, 0.5), 0 0 50px rgba(255, 120, 0, 0.25);
+  animation-name: sc-char-bob;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+  will-change: transform;
 }
 
-@keyframes sc-kanji-pulse {
-  0%, 100% { opacity: 0.4; transform: translateY(0); }
-  50%       { opacity: 1; transform: translateY(-8px); }
+@keyframes sc-char-bob {
+  0% {
+    transform: translateY(0px);
+  }
+  100% {
+    transform: translateY(-10px);
+  }
 }
 
 .sc-ninja-glow {
@@ -304,4 +317,73 @@
   .sc-enter-btn {
     align-self: center;
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MATRIX RAIN CANVAS
+   ═══════════════════════════════════════════════════════════════════════════ */
+.sc-matrix-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.75;
+}
+
+/* Hide old static kanji now replaced by canvas */
+.sc-kanji-bg { display: none; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SCROLL / NEXT SECTION HINT BUTTON
+   ═══════════════════════════════════════════════════════════════════════════ */
+.sc-scroll-hint {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  opacity: 0.55;
+  transition: opacity 0.2s ease;
+}
+
+.sc-scroll-hint:hover {
+  opacity: 1;
+}
+
+.sc-scroll-hint-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.sc-scroll-arrow {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 161, 22, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: sc-arrow-bounce 1.8s ease-in-out infinite;
+}
+
+.sc-scroll-arrow-icon {
+  width: 9px;
+  height: 9px;
+  border-right: 2px solid var(--accent);
+  border-bottom: 2px solid var(--accent);
+  transform: rotate(45deg) translate(-2px, -2px);
+}
+
+@keyframes sc-arrow-bounce {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(5px); }
 }

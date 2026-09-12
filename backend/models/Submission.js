@@ -47,6 +47,8 @@ const submissionSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    // True when submitted after contest ended (upsolving) — excluded from leaderboard
+    isUpsolve: { type: Boolean, default: false },
   },
   {
     timestamps: true,

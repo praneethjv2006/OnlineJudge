@@ -1655,6 +1655,35 @@
   color: #2cbb5d;
 }
 
+.scheduled-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  background: rgba(0,180,216,0.08);
+  border-bottom: 1px solid rgba(0,180,216,0.2);
+  color: #00b4d8;
+}
+
+/* Official contest badge in header */
+.official-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  background: rgba(255,215,0,0.1);
+  border: 1px solid rgba(255,215,0,0.3);
+  color: #ffd700;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-left: 10px;
+}
+
 /* ─── Inline Leaderboard in Room ─────────────────────── */
 .lb-inline {
   display: flex;
@@ -1880,13 +1909,44 @@
   margin-top: 4px;
 }
 
-.tier-novice     { background: rgba(100,100,100,0.1); color: #888; border-color: rgba(100,100,100,0.25); }
+.tier-unranked    { background: rgba(80,80,80,0.1);     color: #555;    border-color: rgba(80,80,80,0.2); }
+.tier-wanderer    { background: rgba(120,120,130,0.1);  color: #8a8a99; border-color: rgba(120,120,130,0.3); }
+.tier-challenger  { background: rgba(44,187,93,0.1);    color: #2cbb5d; border-color: rgba(44,187,93,0.3); }
+.tier-adept       { background: rgba(6,214,160,0.1);    color: #06d6a0; border-color: rgba(6,214,160,0.3); }
+.tier-specialist  { background: rgba(0,180,216,0.1);    color: #00b4d8; border-color: rgba(0,180,216,0.3); }
+.tier-expert      { background: rgba(155,93,229,0.1);   color: #9b5de5; border-color: rgba(155,93,229,0.3); }
+.tier-grandmaster { background: rgba(255,161,22,0.1);   color: #ffa116; border-color: rgba(255,161,22,0.3); }
+.tier-legendary   { background: rgba(255,215,0,0.1);    color: #ffd700; border-color: rgba(255,215,0,0.3); }
+
+/* Legacy aliases — kept for safety, old data */
+.tier-novice     { background: rgba(120,120,130,0.1); color: #8a8a99; border-color: rgba(120,120,130,0.3); }
 .tier-apprentice { background: rgba(44,187,93,0.1);   color: #2cbb5d; border-color: rgba(44,187,93,0.3); }
 .tier-proficient { background: rgba(0,180,216,0.1);   color: #00b4d8; border-color: rgba(0,180,216,0.3); }
-.tier-expert     { background: rgba(155,93,229,0.1);  color: #9b5de5; border-color: rgba(155,93,229,0.3); }
 .tier-master     { background: rgba(255,161,22,0.1);  color: #ffa116; border-color: rgba(255,161,22,0.3); }
-.tier-grandmaster{ background: rgba(239,71,67,0.1);   color: #ef4743; border-color: rgba(239,71,67,0.3); }
-.tier-unranked   { background: rgba(80,80,80,0.1);    color: #666;    border-color: rgba(80,80,80,0.2); }
+
+/* Tag tier badges */
+.tag-tier-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.tag-tier-badge.tier-unranked    { background: rgba(80,80,80,0.15);     color: #666; }
+.tag-tier-badge.tier-wanderer    { background: rgba(120,120,130,0.15);  color: #8a8a99; }
+.tag-tier-badge.tier-challenger  { background: rgba(44,187,93,0.12);    color: #2cbb5d; }
+.tag-tier-badge.tier-adept       { background: rgba(6,214,160,0.12);    color: #06d6a0; }
+.tag-tier-badge.tier-specialist  { background: rgba(0,180,216,0.12);    color: #00b4d8; }
+.tag-tier-badge.tier-expert      { background: rgba(155,93,229,0.12);   color: #9b5de5; }
+.tag-tier-badge.tier-grandmaster { background: rgba(255,161,22,0.12);   color: #ffa116; }
+.tag-tier-badge.tier-legendary   { background: rgba(255,215,0,0.12);    color: #ffd700; }
+/* Legacy tag badges */
+.tag-tier-badge.tier-novice     { background: rgba(80,80,80,0.12);    color: #777; }
+.tag-tier-badge.tier-apprentice { background: rgba(44,187,93,0.12);   color: #2cbb5d; }
+.tag-tier-badge.tier-proficient { background: rgba(0,180,216,0.12);   color: #00b4d8; }
+.tag-tier-badge.tier-master     { background: rgba(255,161,22,0.12);  color: #ffa116; }
+
 
 /* Difficulty breakdown */
 .diff-breakdown-row {
@@ -1958,34 +2018,21 @@
 .tag-rating-right {
   display: flex;
   align-items: center;
-  gap: 8px;
-}
-
-.tag-bar-bg {
-  flex: 1;
-  height: 6px;
-  background: rgba(255,255,255,0.08);
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.tag-bar-fill {
-  height: 100%;
-  border-radius: 3px;
-  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  gap: 12px;
 }
 
 .tag-rating-num {
-  font-size: 0.82rem;
+  font-size: 0.95rem;
   font-weight: 800;
-  min-width: 32px;
+  min-width: 42px;
   text-align: right;
+  letter-spacing: -0.02em;
 }
 
 .tag-tier-badge {
-  font-size: 0.65rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  padding: 2px 7px;
+  padding: 3px 10px;
   border-radius: 99px;
   white-space: nowrap;
   letter-spacing: 0.03em;

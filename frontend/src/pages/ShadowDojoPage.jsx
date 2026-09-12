@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import Editor from "@monaco-editor/react";
 import {
   Maximize2,
-  RotateCcw,
   Play,
   Send,
   Loader2,
@@ -12,6 +11,7 @@ import {
   Code2,
   HelpCircle,
   ArrowLeft,
+  ChevronRight,
 } from "lucide-react";
 
 import {
@@ -21,10 +21,12 @@ import {
 } from "../data/dojoChallenges";
 
 import CategoryBadge from "../components/dojo/CategoryBadge";
+import CategoryIcon from "../components/dojo/CategoryIcon";
 import CategoryInfoModal from "../components/dojo/CategoryInfoModal";
 import ChoiceUI from "../components/dojo/ChoiceUI";
 import InteractiveUI from "../components/dojo/InteractiveUI";
 import PredictUI from "../components/dojo/PredictUI";
+import { toast } from "../components/common/Toast";
 
 // ─── Ninja motivation quotes for the intro ────────────────────────────────────
 const NINJA_QUOTES = [
@@ -39,7 +41,7 @@ const NINJA_QUOTES = [
 export default function ShadowDojoPage() {
   const navigate = useNavigate();
 
-  // Phase: intro → reveal → challenge → result
+  // Phase: intro → reveal → challenge
   const [phase, setPhase] = useState("intro");
   const [challenge, setChallenge] = useState(null);
   const [revealStep, setRevealStep] = useState(0);
@@ -53,9 +55,6 @@ export default function ShadowDojoPage() {
   const [runResult, setRunResult] = useState(null);
   const [showHint, setShowHint] = useState(false);
   const [showCategoryInfo, setShowCategoryInfo] = useState(false);
-
-  // Result state
-  const [finalResult, setFinalResult] = useState(null);
 
   // Quote for intro
   const [quote] = useState(() => NINJA_QUOTES[Math.floor(Math.random() * NINJA_QUOTES.length)]);
@@ -85,7 +84,6 @@ export default function ShadowDojoPage() {
     setRunResult(null);
     setShowHint(false);
     setShowCategoryInfo(false);
-    setFinalResult(null);
 
     // Animate reveal steps
     setTimeout(() => setRevealStep(1), 600);
@@ -98,6 +96,50 @@ export default function ShadowDojoPage() {
     }, 2600);
   };
 
+  // Format Dojo challenge description safely with clean code blocks and line breaks
+  const formatDojoMarkdown = (text) => {
+    if (!text) return "";
+    let formatted = text.replace(/\r\n/g, "\n");
+    const codeBlocks = [];
+    formatted = formatted.replace(/```[\w]*\n([\s\S]*?)```/g, (_, codeContent) => {
+      const idx = codeBlocks.length;
+      codeBlocks.push(`<pre><code>${codeContent.trim()}</code></pre>`);
+      return `__DOJO_CODE_${idx}__`;
+    });
+    formatted = formatted
+      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+      .replace(/\*(.*?)\*/g, "<em>$1</em>")
+      .replace(/`([^`]+)`/g, "<code>$1</code>")
+      .replace(/\n/g, "<br/>");
+    codeBlocks.forEach((block, idx) => {
+      formatted = formatted.replace(`__DOJO_CODE_${idx}__`, block);
+    });
+    return formatted;
+  };
+
+  const handleNextChallenge = useCallback((nextPicked = null) => {
+    const next = nextPicked || pickChallenge(challenge?.id);
+    setChallenge(next);
+    setRunResult(null);
+    setIsRunning(false);
+    setShowHint(false);
+    setShowCategoryInfo(false);
+    setRevealStep(0);
+    setPhase("reveal");
+
+    // Animate category reveal steps identical to first time entry
+    setTimeout(() => setRevealStep(1), 500);
+    setTimeout(() => setRevealStep(2), 1300);
+    setTimeout(() => {
+      setPhase("challenge");
+      if (next?.starterCode) {
+        setCode(next.starterCode[language] || LANG_STARTERS[language]);
+      } else {
+        setCode("");
+      }
+    }, 2500);
+  }, [challenge, language]);
+
   const handleRun = async () => {
     if (!challenge) return;
     setIsRunning(true);
@@ -107,7 +149,6 @@ export default function ShadowDojoPage() {
     await new Promise((res) => setTimeout(res, 1200 + Math.random() * 800));
 
     if (challenge.uiType === "blind") {
-      // Random result for demo — in production, connect to backend
       const passed = Math.random() > 0.4;
       setRunResult({ verdict: passed ? "Accepted" : "Wrong Answer", blind: true });
     } else {
@@ -121,16 +162,21 @@ export default function ShadowDojoPage() {
     setIsRunning(false);
   };
 
+  // When submitting question: instead of showing result screen with Try Another / Exit Dojo,
+  // notify and immediately show next question in the main page
   const handleResult = (correct) => {
-    setFinalResult(correct);
-    setPhase("result");
+    if (correct) {
+      toast.success("Challenge Conquered! Loading next mystery challenge...");
+    } else {
+      toast.info("Completed! Loading next mystery challenge...");
+    }
+    handleNextChallenge();
   };
 
   const handleReset = () => {
     setPhase("intro");
     setChallenge(null);
     setRunResult(null);
-    setFinalResult(null);
     setRevealStep(0);
     setShowHint(false);
     setShowCategoryInfo(false);
@@ -206,7 +252,7 @@ export default function ShadowDojoPage() {
                 className="dojo-reveal-icon"
                 style={{ "--cat-color": challenge.color }}
               >
-                {challenge.icon}
+                <CategoryIcon category={challenge.category} size={50} />
               </div>
               <div className="dojo-reveal-name" style={{ color: challenge.color }}>
                 {challenge.category}
@@ -219,41 +265,7 @@ export default function ShadowDojoPage() {
     );
   }
 
-  // ── RESULT ─────────────────────────────────────────────────────────────────
-  if (phase === "result") {
-    return (
-      <div className="dojo-fullscreen dojo-result">
-        <div className="dojo-result-content">
-          <div className={`dojo-result-icon ${finalResult ? "pass" : "fail"}`}>
-            {finalResult ? (
-              <CheckCircle2 size={64} />
-            ) : (
-              <XCircle size={64} />
-            )}
-          </div>
-          <h2 className={`dojo-result-title ${finalResult ? "pass" : "fail"}`}>
-            {finalResult ? "Challenge Conquered!" : "The Shadow Wins This Round"}
-          </h2>
-          <p className="dojo-result-category">{challenge?.category}</p>
-          {!finalResult && challenge?.hint && (
-            <div className="dojo-result-hint">
-              <strong>Insight:</strong> {challenge.hint}
-            </div>
-          )}
-          <div className="dojo-result-actions">
-            <button className="dojo-start-btn" onClick={handleReset}>
-              <RotateCcw size={16} /> Try Another
-            </button>
-            <button className="dojo-back-btn-large" onClick={() => navigate("/shadow-code")}>
-              Exit Dojo
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ── CHALLENGE ──────────────────────────────────────────────────────────────
+  // ── CHALLENGE (Main Page) ──────────────────────────────────────────────────
   const isEditorChallenge = challenge?.uiType === "blind" || challenge?.uiType === "debug";
   const isChoiceChallenge = challenge?.uiType === "choices";
   const isPredictChallenge = challenge?.uiType === "predict";
@@ -272,7 +284,7 @@ export default function ShadowDojoPage() {
       {/* Header */}
       <header className="dojo-header">
         <div className="dojo-header-left">
-          <button className="dojo-back-small" onClick={handleReset}>
+          <button className="dojo-back-small" onClick={handleReset} title="Exit to Intro">
             <ArrowLeft size={14} />
           </button>
           {challenge && (
@@ -332,7 +344,16 @@ export default function ShadowDojoPage() {
             {showHint ? "Hide Hint" : "Hint"}
           </button>
 
-          <button className="dojo-fs-btn-small" onClick={handleFullscreen}>
+          <button
+            className="dojo-next-btn"
+            onClick={() => handleNextChallenge()}
+            title="Skip to next challenge"
+          >
+            <span>Next Question</span>
+            <ChevronRight size={14} />
+          </button>
+
+          <button className="dojo-fs-btn-small" onClick={handleFullscreen} title="Toggle fullscreen">
             <Maximize2 size={14} />
           </button>
         </div>
@@ -350,21 +371,15 @@ export default function ShadowDojoPage() {
         {/* Left: description */}
         <div className="dojo-left-panel">
           <div className="dojo-problem-header">
-            <div className="dojo-problem-cat" style={{ color: challenge?.color }}>
-              {challenge?.icon} {challenge?.category}
+            <div className="dojo-problem-cat" style={{ "--cat-color": challenge?.color, color: challenge?.color }}>
+              <CategoryIcon category={challenge?.category} size={16} />
+              <span>{challenge?.category}</span>
             </div>
           </div>
           <div
             className="dojo-problem-body"
             dangerouslySetInnerHTML={{
-              __html: challenge?.description
-                ? challenge.description
-                    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-                    .replace(/\*(.*?)\*/g, "<em>$1</em>")
-                    .replace(/`([^`]+)`/g, "<code>$1</code>")
-                    .replace(/```[\w]*\n([\s\S]*?)```/g, "<pre><code>$1</code></pre>")
-                    .replace(/\n/g, "<br/>")
-                : "",
+              __html: formatDojoMarkdown(challenge?.description),
             }}
           />
         </div>
@@ -392,10 +407,13 @@ export default function ShadowDojoPage() {
                   onChange={(val) => setCode(val || "")}
                   options={{
                     fontSize: 14,
+                    lineHeight: 22,
                     minimap: { enabled: false },
                     scrollBeyondLastLine: false,
                     automaticLayout: true,
                     fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+                    padding: { top: 18, bottom: 18 },
+                    lineNumbersMinChars: 3,
                   }}
                 />
               </div>
@@ -428,19 +446,19 @@ export default function ShadowDojoPage() {
 
           {isChoiceChallenge && (
             <div className="dojo-special-ui">
-              <ChoiceUI challenge={challenge} onResult={handleResult} />
+              <ChoiceUI key={challenge?.id} challenge={challenge} onResult={handleResult} />
             </div>
           )}
 
           {isPredictChallenge && (
             <div className="dojo-special-ui">
-              <PredictUI challenge={challenge} onResult={handleResult} />
+              <PredictUI key={challenge?.id} challenge={challenge} onResult={handleResult} />
             </div>
           )}
 
           {isInteractiveChallenge && (
             <div className="dojo-special-ui">
-              <InteractiveUI onResult={handleResult} />
+              <InteractiveUI key={challenge?.id} onResult={handleResult} />
             </div>
           )}
         </div>

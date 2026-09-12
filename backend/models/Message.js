@@ -42,6 +42,24 @@ const messageSchema = new mongoose.Schema(
       of: [String], // array of user IDs who reacted with that emoji
       default: {},
     },
+    // Message delivery/seen status for WhatsApp ticks
+    // "saved" = saved on server (double white tick)
+    // "seen"  = seen by other participants (double blue tick)
+    status: {
+      type: String,
+      enum: ["saved", "seen"],
+      default: "saved",
+    },
+    seenBy: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+    seenAt: {
+      type: Date,
+      default: null,
+    },
     // TTL field — MongoDB auto-deletes this document 48 hours after creation
     expiresAt: {
       type: Date,

@@ -12,13 +12,16 @@ const questionSchema = new mongoose.Schema(
   {
     title: { type: String, required: true, trim: true },
     prompt: { type: String, required: true, trim: true },
-    timeLimitMs: { type: Number, required: true, min: 100 },
+    timeLimitMs: { type: Number, required: true, min: 100, default: 2000 },
+    memoryLimitMb: { type: Number, default: 256 },
     difficulty: { type: String, enum: ["easy", "medium", "hard"], default: "medium" },
     category: { type: String, default: "Coding", trim: true },
     cognitiveCategories: { type: [String], default: [] },
     topics: { type: [String], default: [] },
     tags: { type: [String], default: [] },
     points: { type: Number, default: 100 },
+    // If linked to a Problem document (added from problem library)
+    problemRef: { type: mongoose.Schema.Types.ObjectId, ref: "Problem", default: null },
     testCases: {
       type: [testCaseSchema],
       validate: [(value) => value.length > 0, "At least one test case is required."],
@@ -42,10 +45,10 @@ const leaderboardEntrySchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     userName: { type: String, default: "" },
-    score: { type: Number, default: 0 },           // total points
-    penalty: { type: Number, default: 0 },          // total penalty minutes
+    score: { type: Number, default: 0 },
+    penalty: { type: Number, default: 0 },
     questionsSolved: { type: Number, default: 0 },
-    questionResults: { type: mongoose.Schema.Types.Mixed, default: {} }, // { questionIndex: { solved, attempts, solvedAt } }
+    questionResults: { type: mongoose.Schema.Types.Mixed, default: {} },
     lastSubmitAt: { type: Date, default: null },
     rank: { type: Number, default: 0 },
   },
@@ -69,11 +72,13 @@ const contestSchema = new mongoose.Schema(
     type: { type: String, enum: ["regular", "virtual"], default: "regular" },
     virtualOf: { type: mongoose.Schema.Types.ObjectId, ref: "Contest", default: null },
     durationMinutes: { type: Number, required: true, min: 15 },
-    scheduledAt: { type: Date, default: null },   // For upcoming contests
+    scheduledAt: { type: Date, default: null },
     startAt: { type: Date, default: Date.now },
     endAt: { type: Date, default: null },
     actualStartAt: { type: Date, default: null },
     actualEndAt: { type: Date, default: null },
+    // isOfficial: only admin-created official contests contribute to global ratings
+    isOfficial: { type: Boolean, default: false },
     questions: {
       type: [questionSchema],
       validate: [(value) => value.length > 0, "At least one question is required."],

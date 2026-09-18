@@ -234,7 +234,7 @@ const computeTagRatings = (acceptedSubs) => {
 
   return Object.entries(tagMap).map(([, entry]) => {
     const { displayTag, totalPoints, count } = entry;
-    // Cap at 3000 Codeforces-style, compress via sqrt curve
+    // Cap at 3000, compress via sqrt curve
     const rawRating = Math.round(Math.min(3000, totalPoints));
     const tier = getTierFromRating(rawRating);
     return { tag: displayTag, rating: rawRating, solved: count, tier };
@@ -242,14 +242,15 @@ const computeTagRatings = (acceptedSubs) => {
 };
 
 const getTierFromRating = (rating) => {
-  if (rating === 0) return "Unranked";
-  if (rating < 400) return "Wanderer";
-  if (rating < 800) return "Challenger";
-  if (rating < 1200) return "Adept";
-  if (rating < 1600) return "Specialist";
-  if (rating < 2000) return "Expert";
-  if (rating < 2400) return "Grandmaster";
-  return "Legendary";
+  const r = Number(rating) || 0;
+  if (r <= 0) return "Unranked";
+  if (r < 1200) return "Novice";
+  if (r < 1400) return "Apprentice";
+  if (r < 1600) return "Adept";
+  if (r < 1900) return "Virtuoso";
+  if (r < 2200) return "Elite";
+  if (r < 2500) return "Legend";
+  return "Apex";
 };
 
 const computeOverallRating = (tagRatings, easySolved, mediumSolved, hardSolved) => {
@@ -271,7 +272,7 @@ const getMyStats = async (req, res) => {
     // Fetch all submissions for this user, populating the contest questions and problem details
     const submissions = await Submission.find({ user: userId })
       .populate("contest", "title questions")
-      .populate("problem", "title difficulty category cognitiveCategories topics tags")
+      .populate("problem", "title difficulty category cognitiveCategories topics tags rating")
       .sort({ createdAt: -1 });
 
     const solvedSet = new Set();
@@ -288,16 +289,22 @@ const getMyStats = async (req, res) => {
       solvedCounts[cat] = 0;
     });
 
-    // For tag-based skill rating
+    // For tag-based skill rating & rating histogram
     const acceptedSubsForTagRating = [];
+    const ratingDistributionMap = {};
     let easySolved = 0;
     let mediumSolved = 0;
     let hardSolved = 0;
+    let maxSolvedRating = 0;
+    let totalSolvedRatingSum = 0;
 
     submissions.forEach((sub) => {
       if (sub.verdict === "Accepted") {
         let questionKey = "";
         let cogCats = [];
+        let qDifficulty = "medium";
+        let qTags = [];
+        let qRating = 800;
 
         if (sub.contest) {
           questionKey = `contest-${sub.contest._id || sub.contest}-${sub.questionIndex}`;
@@ -310,9 +317,10 @@ const getMyStats = async (req, res) => {
               cogCats = inferCognitiveCategories(q?.title || "", q?.topics || []);
             }
 
-            // Tag rating data for contest questions
-            const qDifficulty = q?.difficulty || "medium";
-            const qTags = q?.tags || q?.topics || [];
+            qDifficulty = q?.difficulty || "medium";
+            qTags = q?.tags || q?.topics || [];
+            qRating = Number(q?.rating) || (qDifficulty === "hard" ? 1900 : qDifficulty === "medium" ? 1400 : 800);
+
             acceptedSubsForTagRating.push({
               difficulty: qDifficulty,
               tags: qTags,
@@ -321,6 +329,12 @@ const getMyStats = async (req, res) => {
             if (qDifficulty === "easy") easySolved++;
             else if (qDifficulty === "hard") hardSolved++;
             else mediumSolved++;
+
+            // Bucket problem rating (multiples of 100, e.g. 800, 900, 1000...)
+            const bucket = Math.round(qRating / 100) * 100;
+            ratingDistributionMap[bucket] = (ratingDistributionMap[bucket] || 0) + 1;
+            maxSolvedRating = Math.max(maxSolvedRating, qRating);
+            totalSolvedRatingSum += qRating;
           }
         } else if (sub.problem) {
           questionKey = `problem-${sub.problem._id || sub.problem}`;
@@ -335,17 +349,23 @@ const getMyStats = async (req, res) => {
               );
             }
 
-            // Tag rating data for practice problems
-            const pDifficulty = sub.problem?.difficulty || "medium";
-            const pTags = sub.problem?.tags || sub.problem?.topics || [];
+            qDifficulty = sub.problem?.difficulty || "medium";
+            qTags = sub.problem?.tags || sub.problem?.topics || [];
+            qRating = Number(sub.problem?.rating) || (qDifficulty === "hard" ? 1900 : qDifficulty === "medium" ? 1400 : 800);
+
             acceptedSubsForTagRating.push({
-              difficulty: pDifficulty,
-              tags: pTags,
+              difficulty: qDifficulty,
+              tags: qTags,
               solvedAt: sub.submittedAt || sub.createdAt,
             });
-            if (pDifficulty === "easy") easySolved++;
-            else if (pDifficulty === "hard") hardSolved++;
+            if (qDifficulty === "easy") easySolved++;
+            else if (qDifficulty === "hard") hardSolved++;
             else mediumSolved++;
+
+            const bucket = Math.round(qRating / 100) * 100;
+            ratingDistributionMap[bucket] = (ratingDistributionMap[bucket] || 0) + 1;
+            maxSolvedRating = Math.max(maxSolvedRating, qRating);
+            totalSolvedRatingSum += qRating;
           }
         }
 
@@ -363,6 +383,7 @@ const getMyStats = async (req, res) => {
     });
 
     const totalSolved = solvedSet.size;
+    const avgSolvedRating = totalSolved > 0 ? Math.round(totalSolvedRatingSum / totalSolved) : 0;
 
     const cognitiveProfile = cognitiveCategoriesList.map((name) => {
       const solved = solvedCounts[name] || 0;
@@ -381,10 +402,33 @@ const getMyStats = async (req, res) => {
       };
     });
 
-    // Compute tag-based skill ratings (new UVP feature)
+    // Compute tag-based skill ratings
     const tagRatings = computeTagRatings(acceptedSubsForTagRating);
     const overallRating = computeOverallRating(tagRatings, easySolved, mediumSolved, hardSolved);
     const overallTier = getTierFromRating(overallRating);
+
+    // Pull persisted AI performance ratings & rating history from user document
+    const freshUser = await User.findById(userId).select("skillMetadata");
+    let ratingHistory = freshUser?.skillMetadata?.contestRatingHistory || [];
+    if (!ratingHistory || ratingHistory.length === 0) {
+      const acceptedAsc = [...submissions]
+        .filter((s) => s.verdict === "Accepted")
+        .sort((a, b) => new Date(a.submittedAt || a.createdAt) - new Date(b.submittedAt || b.createdAt));
+
+      if (acceptedAsc.length > 0) {
+        const startRating = 800;
+        ratingHistory = acceptedAsc.map((sub, idx) => {
+          const progressRatio = (idx + 1) / acceptedAsc.length;
+          const currentElo = Math.round(startRating + (overallRating - startRating) * progressRatio);
+          const qTitle = sub.problem?.title || (sub.contest?.title ? `${sub.contest.title} (Q${(sub.questionIndex || 0) + 1})` : "Practice Problem");
+          return {
+            rating: Math.max(800, currentElo),
+            date: sub.submittedAt || sub.createdAt,
+            title: qTitle,
+          };
+        });
+      }
+    }
 
     const skillMetadata = {
       overallRating,
@@ -394,6 +438,17 @@ const getMyStats = async (req, res) => {
       mediumSolved,
       hardSolved,
       totalSolved,
+      ratingDistribution: ratingDistributionMap,
+      maxSolvedRating,
+      avgSolvedRating,
+      contestRatingHistory: ratingHistory,
+    };
+
+    const performanceRatings = freshUser?.skillMetadata?.performanceRatings || {
+      solvingSpeed: { rating: 0, tier: "Unranked" },
+      codeQuality: { rating: 0, tier: "Unranked" },
+      optimizationAbility: { rating: 0, tier: "Unranked" },
+      memoryEfficiency: { rating: 0, tier: "Unranked" },
     };
 
     return res.json({
@@ -401,14 +456,17 @@ const getMyStats = async (req, res) => {
       totalSolved,
       cognitiveProfile,
       skillMetadata,
+      performanceRatings,
       submissions: submissions.map((sub) => {
         let questionTitle = "Unknown Problem";
         let difficulty = "medium";
+        let rating = 800;
         let contestTitle = "Practice";
 
         if (sub.problem) {
           questionTitle = sub.problem.title || "Unknown Practice Problem";
           difficulty = sub.problem.difficulty || "medium";
+          rating = Number(sub.problem.rating) || (difficulty === "hard" ? 1900 : difficulty === "medium" ? 1400 : 800);
         } else if (sub.contest) {
           contestTitle = sub.contest.title || "Unknown Contest";
           questionTitle = `Question #${sub.questionIndex + 1}`;
@@ -417,6 +475,8 @@ const getMyStats = async (req, res) => {
             if (q && q.title) {
               questionTitle = q.title;
             }
+            if (q?.difficulty) difficulty = q.difficulty;
+            rating = Number(q?.rating) || (difficulty === "hard" ? 1900 : difficulty === "medium" ? 1400 : 800);
           }
         }
 
@@ -427,6 +487,7 @@ const getMyStats = async (req, res) => {
           questionIndex: sub.questionIndex,
           questionTitle,
           difficulty,
+          rating,
           language: sub.language,
           verdict: sub.verdict,
           code: sub.code,

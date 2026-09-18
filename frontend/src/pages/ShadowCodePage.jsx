@@ -272,90 +272,72 @@ export default function ShadowCodePage() {
   const handleEnterDojo = () => navigate("/shadow-code/dojo");
 
   return (
-    <div className="sc-landing">
-      {/* Matrix rain canvas background */}
-      <MatrixRain />
+    <div style={{ minHeight: "100vh", background: "#050505", overflowX: "hidden" }}>
+      <div className="sc-landing">
+        {/* Matrix rain canvas background */}
+        <MatrixRain />
 
-      {/* Fog layers */}
-      <div className="sc-fog sc-fog-1" />
-      <div className="sc-fog sc-fog-2" />
-      <div className="sc-fog sc-fog-3" />
+        {/* Fog layers */}
+        <div className="sc-fog sc-fog-1" />
+        <div className="sc-fog sc-fog-2" />
+        <div className="sc-fog sc-fog-3" />
 
-      {/* Floating particles */}
-      {particles.map((p) => (
-        <Particle
-          key={p.id}
-          style={{
-            left: p.left,
-            width: p.width,
-            height: p.height,
-            opacity: p.opacity,
-            animationDelay: p.animationDelay,
-            animationDuration: p.animationDuration,
-          }}
-        />
-      ))}
+        {/* Floating particles */}
+        {particles.map((p) => (
+          <Particle
+            key={p.id}
+            style={{
+              left: p.left,
+              width: p.width,
+              height: p.height,
+              opacity: p.opacity,
+              animationDelay: p.animationDelay,
+              animationDuration: p.animationDuration,
+            }}
+          />
+        ))}
 
-      {/* Radial glow behind ninja */}
-      <div className="sc-ninja-glow" />
+        {/* Radial glow behind ninja */}
+        <div className="sc-ninja-glow" />
 
-      {/* Main content layout */}
-      <div className={`sc-content ${revealed ? "sc-content-visible" : ""}`}>
+        {/* Main content layout */}
+        <div className={`sc-content ${revealed ? "sc-content-visible" : ""}`}>
 
-        {/* 3D Ninja — full left column */}
-        <div className="sc-ninja-wrapper">
-          <Suspense fallback={<FallbackNinja />}>
-            <NinjaScene />
-          </Suspense>
-          <div className="sc-ninja-shadow" />
-        </div>
-
-        {/* Text story — right column */}
-        <div className="sc-story">
-          <div className="sc-eyebrow">
-            <span className="sc-dot" />
-            Mystery Dojo
-            <span className="sc-dot" />
+          {/* 3D Ninja — full left column */}
+          <div className="sc-ninja-wrapper">
+            <Suspense fallback={<FallbackNinja />}>
+              <NinjaScene />
+            </Suspense>
+            <div className="sc-ninja-shadow" />
           </div>
 
-          <h1 className="sc-headline">
-            You feel bored by attempting
-            <br />
-            <span className="sc-headline-accent">regular style questions?</span>
-          </h1>
-
-          <p className="sc-subtext">
-            Enter the Mystery Dojo — where questions wear masks and every challenge
-            <br />
-            is a surprise. No patterns. No comfort zones. Only your instinct and skill.
-          </p>
-
-          <button
-            id="enter-dojo-btn"
-            className="sc-enter-btn"
-            onClick={handleEnterDojo}
-          >
-            <span className="sc-enter-btn-glow" />
-            <span className="sc-enter-icon">⚔</span>
-            Enter Dojo
-          </button>
-
-          <p className="sc-disclaimer">
-            10 categories of surprise challenges await inside.
-          </p>
-
-          {/* Next section hint */}
-          <button className="sc-scroll-hint" onClick={handleEnterDojo} aria-label="Enter dojo">
-            <span className="sc-scroll-hint-label">Enter the Dojo</span>
-            <div className="sc-scroll-arrow">
-              <div className="sc-scroll-arrow-icon" />
+          {/* Text story — right column */}
+          <div className="sc-story">
+            <div className="sc-eyebrow">
+              <span className="sc-dot" />
+              Mystery Dojo
+              <span className="sc-dot" />
             </div>
-          </button>
-        </div>
-      </div>
 
-      {/* Bottom vignette */}
-      <div className="sc-vignette-bottom" />
+            <h1 className="sc-headline">
+              You feel bored by attempting
+              <br />
+              <span className="sc-headline-accent">regular style questions?</span>
+            </h1>
+
+            {/* Enter Shadow Code button (directly enters dojo) */}
+            <button className="sc-scroll-hint" onClick={handleEnterDojo} aria-label="Enter Shadow Code">
+              <span className="sc-scroll-hint-label">Enter Shadow Code</span>
+              <div className="sc-scroll-arrow">
+                <div className="sc-scroll-arrow-icon" />
+              </div>
+            </button>
+          </div>
+        </div>
+
+        {/* Bottom vignette */}
+        <div className="sc-vignette-bottom" />
+      </div>
     </div>
   );
 }

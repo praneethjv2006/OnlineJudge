@@ -28,6 +28,12 @@ const problemSchema = new mongoose.Schema(
       enum: ["easy", "medium", "hard"],
       required: true,
     },
+    rating: {
+      type: Number,
+      default: 800,
+      min: 800,
+      max: 3500,
+    },
     statement: {
       type: String,
       required: true,

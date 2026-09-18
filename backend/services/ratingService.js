@@ -20,19 +20,20 @@ const Contest = require("../models/Contest");
 const Submission = require("../models/Submission");
 
 const TIERS = [
-  { min: 2400, name: "Legendary" },
-  { min: 2000, name: "Grandmaster" },
-  { min: 1600, name: "Expert" },
-  { min: 1200, name: "Specialist" },
-  { min: 800,  name: "Adept" },
-  { min: 400,  name: "Challenger" },
-  { min: 1,    name: "Wanderer" },
-  { min: 0,    name: "Unranked" },
+  { min: 2500, name: "Apex", color: "#ef4444" },
+  { min: 2200, name: "Legend", color: "#f59e0b" },
+  { min: 1900, name: "Elite", color: "#a855f7" },
+  { min: 1600, name: "Virtuoso", color: "#6366f1" },
+  { min: 1400, name: "Adept", color: "#06b6d4" },
+  { min: 1200, name: "Apprentice", color: "#10b981" },
+  { min: 1,    name: "Novice", color: "#0ea5e9" },
+  { min: 0,    name: "Unranked", color: "#64748b" },
 ];
 
 const getTier = (rating) => {
+  const r = Number(rating) || 0;
   for (const t of TIERS) {
-    if (rating >= t.min) return t.name;
+    if (r >= t.min) return t.name;
   }
   return "Unranked";
 };

@@ -22,6 +22,13 @@ const skillMetadataSchema = new mongoose.Schema(
     totalContestsParticipated: { type: Number, default: 0 },
     bestContestRank: { type: Number, default: null },
     contestRatingHistory: { type: [{ rating: Number, date: Date, contestId: mongoose.Schema.Types.ObjectId }], default: [] },
+    // 4-dimensional AI performance ratings (ELO per dimension)
+    performanceRatings: {
+      solvingSpeed: { rating: { type: Number, default: 0 }, tier: { type: String, default: "Unranked" }, score: { type: Number, default: 0 } },
+      codeQuality: { rating: { type: Number, default: 0 }, tier: { type: String, default: "Unranked" }, score: { type: Number, default: 0 } },
+      optimizationAbility: { rating: { type: Number, default: 0 }, tier: { type: String, default: "Unranked" }, score: { type: Number, default: 0 } },
+      memoryEfficiency: { rating: { type: Number, default: 0 }, tier: { type: String, default: "Unranked" }, score: { type: Number, default: 0 } },
+    },
   },
   { _id: false }
 );

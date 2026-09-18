@@ -49,6 +49,19 @@ const submissionSchema = new mongoose.Schema(
     },
     // True when submitted after contest ended (upsolving) — excluded from leaderboard
     isUpsolve: { type: Boolean, default: false },
+    // AI-rated 4-dimensional performance scores (optional, populated asynchronously after AC)
+    performanceRatings: {
+      solvingSpeed: { type: Number, default: null },
+      codeQuality: { type: Number, default: null },
+      optimizationAbility: { type: Number, default: null },
+      memoryEfficiency: { type: Number, default: null },
+      scores: {
+        solvingSpeed: { type: Number, default: null },
+        codeQuality: { type: Number, default: null },
+        optimizationAbility: { type: Number, default: null },
+        memoryEfficiency: { type: Number, default: null },
+      },
+    },
   },
   {
     timestamps: true,

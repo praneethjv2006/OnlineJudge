@@ -26,6 +26,7 @@ const EMPTY_TEST_CASE = { input: "", expectedOutput: "" };
 const createEmptyForm = () => ({
   title: "",
   difficulty: "easy",
+  rating: 800,
   tags: "",
   category: "Coding",
   cognitiveCategories: [],
@@ -53,9 +54,12 @@ const toEditorForm = (problem) => {
     explanation: "",
   }));
 
+  const defaultRating = problem.difficulty === "hard" ? 1900 : problem.difficulty === "medium" ? 1400 : 800;
+
   return {
     title: problem.title || "",
     difficulty: problem.difficulty || "easy",
+    rating: problem.rating || defaultRating,
     tags: Array.isArray(problem.tags) ? problem.tags.join(", ") : "",
     category: problem.category || "Coding",
     cognitiveCategories: Array.isArray(problem.cognitiveCategories) ? problem.cognitiveCategories : [],
@@ -352,6 +356,7 @@ function ProblemEditorModal({ problem, onClose, onSaved }) {
 
     const payload = {
       ...form,
+      rating: Number(form.rating) || 800,
       statement: form.formalStatement,
       timeLimit: Number(form.timeLimit),
       memoryLimit: Number(form.memoryLimit),
@@ -423,27 +428,43 @@ function ProblemEditorModal({ problem, onClose, onSaved }) {
                 <Gauge size={20} />
                 <div>
                   <h3>Problem details</h3>
-                  <p>Identify the challenge and define its execution limits.</p>
+                  <p>Identify the challenge, difficulty, and problem rating.</p>
                 </div>
               </div>
 
+              <Field label="Problem title" required>
+                <input
+                  value={form.title}
+                  onChange={(event) => setField("title", event.target.value)}
+                  placeholder="Example: Minimum Cost to Connect Cities"
+                />
+              </Field>
+
               <div className="problem-editor-grid two">
-                <Field label="Problem title" required>
-                  <input
-                    value={form.title}
-                    onChange={(event) => setField("title", event.target.value)}
-                    placeholder="Example: Minimum Cost to Connect Cities"
-                  />
-                </Field>
                 <Field label="Difficulty" required>
                   <select
                     value={form.difficulty}
-                    onChange={(event) => setField("difficulty", event.target.value)}
+                    onChange={(event) => {
+                      const newDiff = event.target.value;
+                      const suggested = newDiff === "hard" ? 1900 : newDiff === "medium" ? 1400 : 800;
+                      setForm(f => ({ ...f, difficulty: newDiff, rating: suggested }));
+                    }}
                   >
-                    <option value="easy">Easy</option>
-                    <option value="medium">Medium</option>
-                    <option value="hard">Hard</option>
+                    <option value="easy">Easy (Suggested: 800 - 1200)</option>
+                    <option value="medium">Medium (Suggested: 1300 - 1800)</option>
+                    <option value="hard">Hard (Suggested: 1900 - 3000)</option>
                   </select>
+                </Field>
+                <Field label="Rating" hint="e.g. 800, 1200, 1600, 2100" required>
+                  <input
+                    type="number"
+                    min="800"
+                    max="3500"
+                    step="100"
+                    value={form.rating}
+                    onChange={(event) => setField("rating", Number(event.target.value))}
+                    placeholder="800"
+                  />
                 </Field>
               </div>
 

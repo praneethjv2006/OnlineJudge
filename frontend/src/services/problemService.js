@@ -40,6 +40,11 @@ export const getProblemSubmissions = async (id) => {
   return response.data;
 };
 
+export const rateSubmissionPerformance = async (problemId, payload) => {
+  const response = await api.post(`/problems/${problemId}/rate-performance`, payload);
+  return response.data;
+};
+
 export const deleteProblem = async (id) => {
   const response = await api.delete(`/problems/${id}`);
   return response.data;

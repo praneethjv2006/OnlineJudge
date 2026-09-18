@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useAppContext } from "../App";
 import { loadDashboardStats } from "../services/authService";
 import { getErrorMessage } from "../services/api";
@@ -15,13 +15,122 @@ import {
   Target,
   Cpu,
   Layers,
-  Award
+  Award,
+  Star,
+  BarChart3,
+  TrendingUp,
+  CheckCircle2
 } from "lucide-react";
 
 const getMonthName = (monthIndex) => {
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   return months[monthIndex];
 };
+
+
+
+function RankLadderModal({ isOpen, onClose, overallRating = 0, currentTier = {} }) {
+  if (!isOpen) return null;
+
+  const RANKS = [
+    { name: "Novice", range: "< 1200", threshold: 0, color: "#0ea5e9", glow: "rgba(14, 165, 233, 0.35)" },
+    { name: "Apprentice", range: "1200–1399", threshold: 1200, color: "#10b981", glow: "rgba(16, 185, 129, 0.35)" },
+    { name: "Adept", range: "1400–1599", threshold: 1400, color: "#06b6d4", glow: "rgba(6, 182, 212, 0.35)" },
+    { name: "Virtuoso", range: "1600–1899", threshold: 1600, color: "#6366f1", glow: "rgba(99, 102, 241, 0.35)" },
+    { name: "Elite", range: "1900–2199", threshold: 1900, color: "#a855f7", glow: "rgba(168, 85, 247, 0.35)" },
+    { name: "Legend", range: "2200–2499", threshold: 2200, color: "#f59e0b", glow: "rgba(245, 158, 11, 0.35)" },
+    { name: "Apex", range: "2500+", threshold: 2500, color: "#ef4444", glow: "rgba(239, 68, 68, 0.35)" },
+  ];
+
+  return (
+    <div className="cf-ladder-modal-overlay" onClick={onClose}>
+      <div className="cf-ladder-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="cf-ladder-modal-header">
+          <div className="cf-ladder-modal-title-group">
+            <div className="cf-ladder-modal-icon" style={{ background: `${currentTier.color || "#0ea5e9"}22`, color: currentTier.color || "#38bdf8", borderColor: `${currentTier.color || "#0ea5e9"}44` }}>
+              <Award size={20} />
+            </div>
+            <div>
+              <h3 className="cf-ladder-modal-title">Rank Progression Ladder</h3>
+              <p style={{ margin: 0, fontSize: "0.78rem", color: "#94a3b8" }}>
+                Official rating milestones and rank progression tiers
+              </p>
+            </div>
+          </div>
+          <button className="cf-ladder-modal-close" onClick={onClose}>
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="cf-ladder-modal-body">
+          {/* Current Status Banner */}
+          <div className="cf-ladder-current-banner" style={{ borderColor: `${currentTier.color || "#0ea5e9"}66`, background: `linear-gradient(135deg, ${currentTier.color || "#0ea5e9"}18 0%, rgba(255, 255, 255, 0.02) 100%)` }}>
+            <div>
+              <span style={{ fontSize: "0.72rem", color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em", display: "block" }}>
+                Your Current Standing
+              </span>
+              <strong style={{ fontSize: "1.35rem", color: currentTier.color || "#fff", letterSpacing: "-0.02em" }}>
+                {overallRating} <span style={{ fontSize: "0.95rem", fontWeight: 600 }}>({currentTier.name || "Novice"})</span>
+              </strong>
+            </div>
+            <div className="cf-status-badge current" style={{ background: `${currentTier.color || "#0ea5e9"}25`, color: currentTier.color || "#38bdf8", borderColor: `${currentTier.color || "#0ea5e9"}55` }}>
+              Active Rank
+            </div>
+          </div>
+
+          {/* Ranks List */}
+          <div className="cf-ladder-ranks-list">
+            {RANKS.map((rank, idx) => {
+              const isCurrent = currentTier.name === rank.name;
+              const isPassed = overallRating >= rank.threshold;
+              const ptsNeeded = rank.threshold - overallRating;
+
+              return (
+                <div
+                  key={rank.name}
+                  className={`cf-ladder-row ${isCurrent ? "is-current" : isPassed ? "is-passed" : ""}`}
+                  style={{
+                    "--tier-color": rank.color,
+                    "--tier-glow": rank.glow,
+                  }}
+                >
+                  <div className="cf-ladder-row-left">
+                    <div className="cf-ladder-step-num" style={{ color: isCurrent ? rank.color : isPassed ? "#10b981" : "#64748b" }}>
+                      #{idx + 1}
+                    </div>
+                    <div className="cf-tier-dot" style={{ background: rank.color, boxShadow: `0 0 10px ${rank.color}` }} />
+                    <div className="cf-tier-details">
+                      <span className="cf-tier-name-label" style={{ color: rank.color }}>
+                        {rank.name}
+                      </span>
+                      <span className="cf-tier-range-label">
+                        Rating {rank.range}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="cf-ladder-row-right">
+                    {isCurrent ? (
+                      <span className="cf-status-badge current" style={{ background: `${rank.color}25`, color: rank.color, borderColor: `${rank.color}55` }}>
+                        Current Rank
+                      </span>
+                    ) : isPassed ? (
+                      <span className="cf-status-badge achieved">Unlocked ✓</span>
+                    ) : (
+                      <span className="cf-status-badge locked">
+                        +{ptsNeeded} pts
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function DashboardPage() {
   const { user: sessionUser } = useAppContext();
@@ -30,6 +139,7 @@ function DashboardPage() {
   const [selectedSubCode, setSelectedSubCode] = useState(null);
   const [selectedSubTitle, setSelectedSubTitle] = useState("");
   const [selectedSubLanguage, setSelectedSubLanguage] = useState("");
+  const [showLadderModal, setShowLadderModal] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -90,7 +200,7 @@ function DashboardPage() {
     );
   }
 
-  const { totalSolved = 0, submissions = [], skillMetadata = null } = stats || {};
+  const { totalSolved = 0, submissions = [], skillMetadata = null, performanceRatings = null } = stats || {};
 
   // Calculate submission map and streaks
   const submissionsMap = {};
@@ -208,11 +318,38 @@ function DashboardPage() {
 
   const monthsGrids = getMonthsGrids();
 
+  const overallRating = Number(skillMetadata?.overallRating) || 0;
+
+  const RANKS_LADDER = [
+    { name: "Novice", threshold: 0, min: 0, max: 1199, color: "#0ea5e9", glow: "rgba(14, 165, 233, 0.45)" },
+    { name: "Apprentice", threshold: 1200, min: 1200, max: 1399, color: "#10b981", glow: "rgba(16, 185, 129, 0.45)" },
+    { name: "Adept", threshold: 1400, min: 1400, max: 1599, color: "#06b6d4", glow: "rgba(6, 182, 212, 0.45)" },
+    { name: "Virtuoso", threshold: 1600, min: 1600, max: 1899, color: "#6366f1", glow: "rgba(99, 102, 241, 0.45)" },
+    { name: "Elite", threshold: 1900, min: 1900, max: 2199, color: "#a855f7", glow: "rgba(168, 85, 247, 0.45)" },
+    { name: "Legend", threshold: 2200, min: 2200, max: 2499, color: "#f59e0b", glow: "rgba(245, 158, 11, 0.45)" },
+    { name: "Apex", threshold: 2500, min: 2500, max: 3500, color: "#ef4444", glow: "rgba(239, 68, 68, 0.45)" },
+  ];
+
+  let currentTierIdx = 0;
+  for (let i = RANKS_LADDER.length - 1; i >= 0; i--) {
+    if (overallRating >= RANKS_LADDER[i].threshold) {
+      currentTierIdx = i;
+      break;
+    }
+  }
+  const currentTier = RANKS_LADDER[currentTierIdx];
+  const nextTier = currentTierIdx < RANKS_LADDER.length - 1 ? RANKS_LADDER[currentTierIdx + 1] : null;
+  const pointsToNext = nextTier ? Math.max(0, nextTier.threshold - overallRating) : 0;
+  const tierSpan = nextTier ? (nextTier.threshold - currentTier.threshold) : 1000;
+  const tierProgress = nextTier
+    ? Math.min(100, Math.max(0, Math.round(((overallRating - currentTier.threshold) / tierSpan) * 100)))
+    : 100;
+
   return (
     <section className="page-stack dashboard-page">
-      {/* 1. TOP CARDS ROW */}
+      {/* 1. TOP CARDS ROW (Profile | Overall Rating (Center) | Problems Solved (Right)) */}
       <div className="dashboard-grid-main">
-        {/* Profile Details Card */}
+        {/* Profile Details Card (Left) */}
         <div className="profile-card-premium">
           <div className="profile-avatar-large">
             {stats?.user?.name?.[0]?.toUpperCase() || sessionUser?.name?.[0]?.toUpperCase() || "U"}
@@ -226,13 +363,95 @@ function DashboardPage() {
           </div>
         </div>
 
-        {/* Problems Solved Statistics Card */}
+        {/* Overall Rating & Rank Card (Center Highlighted with Yellow Boundary) */}
+        <div
+          className="rating-card-premium"
+          style={{
+            borderColor: "rgba(255, 161, 22, 0.65)",
+            background: "linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%)",
+            boxShadow: "0 10px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(255, 161, 22, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.12)",
+          }}
+        >
+          <div className="rating-card-content">
+            <div className="rating-card-top">
+              <div className="rating-header-left">
+                <div className="rating-kicker-row">
+                  <span className="rating-card-kicker">Overall Rating</span>
+                </div>
+                <div className="rating-num-wrap">
+                  <span className="rating-hero-score" style={{ color: "#ffa116" }}>
+                    {overallRating}
+                  </span>
+                  <span
+                    className="rating-tier-pill"
+                    style={{
+                      color: "#ffa116",
+                      background: "rgba(255, 161, 22, 0.1)",
+                      borderColor: "rgba(255, 161, 22, 0.35)",
+                    }}
+                  >
+                    {currentTier.name}
+                  </span>
+                </div>
+              </div>
+
+              {/* Rank Ladder Info Box / Button */}
+              <button
+                type="button"
+                className="cf-ladder-info-btn"
+                onClick={() => setShowLadderModal(true)}
+                title="View Rank Progression Ladder"
+                style={{
+                  color: "#e2e8f0",
+                  background: "rgba(255, 255, 255, 0.05)",
+                  borderColor: "rgba(255, 255, 255, 0.15)",
+                }}
+              >
+                <Info size={14} style={{ color: "#ffa116" }} />
+                <span>Rank Ladder</span>
+              </button>
+            </div>
+
+            {/* Progress to next rank */}
+            <div className="rating-card-bottom">
+              <div className="rating-progress-meta-row" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.74rem" }}>
+                <span className="rating-progress-label" style={{ color: "#94a3b8", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  {nextTier ? `Progress to ${nextTier.name}` : "Maximum Rank Achieved"}
+                </span>
+                <span className="rating-progress-pct" style={{ color: "#ffa116", fontWeight: 700 }}>
+                  {tierProgress}%
+                </span>
+              </div>
+              <div className="rating-progress-bar-wrap">
+                <div
+                  className="rating-progress-bar-fill"
+                  style={{
+                    width: `${tierProgress}%`,
+                    background: "#ffa116",
+                  }}
+                />
+              </div>
+              <span className="rating-next-tier-hint">
+                {nextTier ? (
+                  <>
+                    <strong style={{ color: "#fff" }}>+{pointsToNext} pts</strong> to{" "}
+                    <span style={{ color: "#ffa116", fontWeight: 700 }}>{nextTier.name}</span> ({nextTier.threshold})
+                  </>
+                ) : (
+                  <span style={{ color: "#ffa116", fontWeight: 700 }}>Top Tier Rating Reached</span>
+                )}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Total Problems Solved Statistics Card (Right End) */}
         <div className="stats-card-premium">
           <div className="stats-details-list">
-            <span>Solved Problems</span>
-            <strong>{totalSolved} Unique Challenges</strong>
-            <p style={{ margin: "4px 0 0 0", fontSize: "0.85rem", color: "var(--muted)" }}>
-              Across public and private contest rooms
+            <span>Practice & Contests</span>
+            <strong>{totalSolved} Problems Solved</strong>
+            <p style={{ margin: "4px 0 0 0", fontSize: "0.82rem", color: "var(--muted)" }}>
+              Total challenges completed
             </p>
           </div>
           <div className="stats-circle-container">
@@ -241,132 +460,155 @@ function DashboardPage() {
         </div>
       </div>
 
-      {/* COGNITIVE PROFILE ENGINE CARD */}
+      {/* PERFORMANCE RATINGS (AI-Analyzed Percentage & Average System) */}
       <div className="cognitive-profile-card panel">
         <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "18px" }}>
-          <Award size={18} style={{ color: "#00b4d8" }} />
-          <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: "700", color: "#fff" }}>Cognitive Profile Engine</h3>
+          <Award size={18} style={{ color: "#38bdf8" }} />
+          <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: "700", color: "#fff" }}>Performance Ratings</h3>
+          <span style={{ marginLeft: "auto", fontSize: "0.75rem", color: "var(--muted)", fontStyle: "italic" }}>
+            Average Performance Across Solved Problems
+          </span>
         </div>
 
-        <div className="cognitive-grid">
-          {(stats?.cognitiveProfile || []).map((skill) => {
-            let SkillIcon = Layers;
-            let themeColor = "#9b5de5"; // purple
+        {(() => {
+          const dims = [
+            {
+              key: "solvingSpeed",
+              label: "Solving Speed",
+              icon: Zap,
+              desc: "First-solve attempt efficiency",
+              color: "#06b6d4",
+              lightColor: "#22d3ee",
+              bgGradient: "linear-gradient(135deg, rgba(6, 182, 212, 0.12), rgba(6, 182, 212, 0.02))",
+              borderColor: "rgba(6, 182, 212, 0.28)",
+              barGradient: "linear-gradient(90deg, #0891b2, #06b6d4, #22d3ee)",
+            },
+            {
+              key: "codeQuality",
+              label: "Code Quality",
+              icon: Star,
+              desc: "Readability & clean structure",
+              color: "#a855f7",
+              lightColor: "#c084fc",
+              bgGradient: "linear-gradient(135deg, rgba(168, 85, 247, 0.12), rgba(168, 85, 247, 0.02))",
+              borderColor: "rgba(168, 85, 247, 0.28)",
+              barGradient: "linear-gradient(90deg, #7e22ce, #a855f7, #c084fc)",
+            },
+            {
+              key: "optimizationAbility",
+              label: "Optimization",
+              icon: Activity,
+              desc: "Time complexity & efficiency",
+              color: "#f59e0b",
+              lightColor: "#fbbf24",
+              bgGradient: "linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(245, 158, 11, 0.02))",
+              borderColor: "rgba(245, 158, 11, 0.28)",
+              barGradient: "linear-gradient(90deg, #d97706, #f59e0b, #fbbf24)",
+            },
+            {
+              key: "memoryEfficiency",
+              label: "Memory Efficiency",
+              icon: Cpu,
+              desc: "Space usage & lightweight footprint",
+              color: "#10b981",
+              lightColor: "#34d399",
+              bgGradient: "linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(16, 185, 129, 0.02))",
+              borderColor: "rgba(16, 185, 129, 0.28)",
+              barGradient: "linear-gradient(90deg, #059669, #10b981, #34d399)",
+            },
+          ];
+          const perf = performanceRatings || {};
 
-            if (skill.name === "Optimization Ability") {
-              SkillIcon = Zap;
-              themeColor = "#00b4d8"; // blue
-            } else if (skill.name === "Mathematical Reasoning") {
-              SkillIcon = Cpu;
-              themeColor = "#06d6a0"; // green
-            } else if (skill.name === "Logic Flow & Debugging") {
-              SkillIcon = Activity;
-              themeColor = "#ffd166"; // yellow
-            } else if (skill.name === "Memory & Complexity") {
-              SkillIcon = Target;
-              themeColor = "#ef476f"; // red/pink
-            }
+          return (
+            <div className="perf-cards-row">
+              {dims.map(({ key, label, icon: Icon, desc, color, lightColor, bgGradient, borderColor, barGradient }) => {
+                const dim = perf[key] || { percentage: 0, rating: 0, score: 0, tier: "Unranked" };
+                const pct = dim.percentage !== undefined && dim.percentage !== null
+                  ? dim.percentage
+                  : dim.rating > 0 && dim.rating <= 100
+                  ? dim.rating
+                  : dim.score > 0
+                  ? Math.round(dim.score * 10)
+                  : Math.min(100, Math.round(((dim.rating || 0) / 3000) * 100));
 
-            return (
-              <div key={skill.name} className="cognitive-skill-row">
-                <div className="skill-info-left">
-                  <div className="skill-icon-wrapper" style={{ backgroundColor: `${themeColor}20`, color: themeColor }}>
-                    <SkillIcon size={18} />
-                  </div>
-                  <div>
-                    <h4 style={{ margin: 0, fontSize: "0.95rem", color: "#fff" }}>{skill.name}</h4>
-                  </div>
-                </div>
-
-                <div className="skill-stats-right">
-                  <div className="cognitive-rating-pill" style={{ borderColor: `${themeColor}44`, background: `${themeColor}12` }}>
-                    <span className="cognitive-rating-score" style={{ color: themeColor }}>
-                      <strong>{skill.rating}</strong> <small>pts</small>
-                    </span>
-                    <span className="cognitive-rating-sep" style={{ color: `${themeColor}44` }}>|</span>
-                    <span className="cognitive-rating-solved">
-                      {skill.solved} solved
-                    </span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* SKILL DNA — Tag Rating System (UVP) */}
-      {skillMetadata && (
-        <div className="skill-dna-card panel">
-          <div className="skill-dna-header">
-            <div className="skill-dna-title-group">
-              <div className="skill-dna-icon"><Zap size={18} /></div>
-              <div>
-                <h3 className="skill-dna-title">Skill DNA</h3>
-              </div>
-            </div>
-            <div className={`overall-rating-badge tier-${skillMetadata.tier?.toLowerCase().replace(/ /g, '-') || 'unranked'}`}>
-              <span className="overall-rating-num">{skillMetadata.overallRating || 0}</span>
-              <span className="overall-rating-tier">{skillMetadata.tier || 'Unranked'}</span>
-            </div>
-          </div>
-
-          {/* Difficulty breakdown */}
-          <div className="diff-breakdown-row">
-            <div className="diff-stat easy">
-              <span className="diff-count">{skillMetadata.easySolved}</span>
-              <span className="diff-label">Easy</span>
-            </div>
-            <div className="diff-stat medium">
-              <span className="diff-count">{skillMetadata.mediumSolved}</span>
-              <span className="diff-label">Medium</span>
-            </div>
-            <div className="diff-stat hard">
-              <span className="diff-count">{skillMetadata.hardSolved}</span>
-              <span className="diff-label">Hard</span>
-            </div>
-            <div className="diff-stat total">
-              <span className="diff-count">{skillMetadata.totalSolved}</span>
-              <span className="diff-label">Total</span>
-            </div>
-          </div>
-
-          {/* Tag ratings */}
-          {skillMetadata.tagRatings?.length > 0 ? (
-            <div className="tag-ratings-grid">
-              {skillMetadata.tagRatings.slice(0, 12).map((tag) => {
-                const tierColor = {
-                  "Legendary": "#ffd700",
-                  "Grandmaster": "#ffa116",
-                  "Expert": "#9b5de5",
-                  "Specialist": "#00b4d8",
-                  "Adept": "#06d6a0",
-                  "Challenger": "#2cbb5d",
-                  "Wanderer": "#777",
-                  "Unranked": "#444",
-                }[tag.tier] || "#666";
+                const avgScore = dim.score !== undefined && dim.score > 0
+                  ? Number(dim.score).toFixed(1)
+                  : (pct / 10).toFixed(1);
 
                 return (
-                  <div key={tag.tag} className="tag-rating-row">
-                    <div className="tag-rating-left">
-                      <span className="tag-name">{tag.tag}</span>
-                      <span className="tag-solved">{tag.solved} solved</span>
+                  <div
+                    key={key}
+                    className="perf-stat-card"
+                    style={{
+                      '--card-accent': color,
+                      '--card-light': lightColor,
+                      background: bgGradient,
+                      borderColor: borderColor,
+                    }}
+                  >
+                    <div className="perf-stat-header">
+                      <div
+                        className="perf-stat-icon-wrap"
+                        style={{
+                          color: lightColor,
+                          background: `${color}22`,
+                          borderColor: `${color}44`,
+                        }}
+                      >
+                        <Icon size={18} />
+                      </div>
+                      <div className="perf-stat-title-group">
+                        <h4 className="perf-stat-title">{label}</h4>
+                        <p className="perf-stat-desc">{desc}</p>
+                      </div>
                     </div>
-                    <div className="tag-rating-right">
-                      <span className="tag-rating-num" style={{ color: tierColor }}>{tag.rating}</span>
-                      <span className={`tag-tier-badge tier-${tag.tier?.toLowerCase()}`}>{tag.tier}</span>
+
+                    <div className="perf-stat-body">
+                      <div className="perf-stat-rating-wrap">
+                        <span className="perf-stat-rating-val" style={{ color: lightColor }}>
+                          {pct}
+                          <span className="perf-stat-pct-sign">%</span>
+                        </span>
+                        <span
+                          className="perf-stat-score-pill"
+                          style={{
+                            color: lightColor,
+                            background: `${color}18`,
+                            borderColor: `${color}33`,
+                          }}
+                        >
+                          {avgScore} / 10
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="perf-stat-footer">
+                      <div className="perf-stat-bar-track">
+                        <div
+                          className="perf-stat-bar-fill"
+                          style={{
+                            width: `${pct}%`,
+                            background: barGradient,
+                            boxShadow: `0 0 10px ${color}66`,
+                          }}
+                        />
+                      </div>
                     </div>
                   </div>
                 );
               })}
             </div>
-          ) : (
-            <div className="tag-ratings-empty">
-              <p>Solve problems with tags to build your Skill DNA profile</p>
-            </div>
-          )}
-        </div>
-      )}
+          );
+        })()}
+      </div>
+
+      {/* Rank Ladder Modal */}
+      <RankLadderModal
+        isOpen={showLadderModal}
+        onClose={() => setShowLadderModal(false)}
+        overallRating={overallRating}
+        currentTier={currentTier}
+      />
 
       {/* 2. ACTIVITY HEATMAP CARD (Leetcode-Style) */}
       <div className="heatmap-card-container">

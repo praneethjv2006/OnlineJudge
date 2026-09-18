@@ -5,7 +5,8 @@ import {
   getProblem, 
   getProblemSubmissions, 
   runProblemCode,
-  analyzeCode
+  analyzeCode,
+  rateSubmissionPerformance
 } from "../services/problemService";
 import Editor from "@monaco-editor/react";
 import Modal from "../components/common/Modal";
@@ -29,7 +30,12 @@ import {
   Loader2,
   Info,
   Wand2,
-  X
+  X,
+  Zap,
+  Star,
+  Award,
+  Cpu,
+  Activity
 } from "lucide-react";
 
 const LANGUAGE_OPTIONS = [
@@ -108,6 +114,9 @@ const getStarterCode = (problem, language, useFunctionMode) => {
 
   return DEFAULT_CODE_TEMPLATES[language] || DEFAULT_CODE_TEMPLATES.cpp;
 };
+
+// ─── Performance Rating Card Component ───────────────────────────────────────
+
 
 function ProblemSolvingPage() {
   const { problemId } = useParams();
@@ -309,6 +318,10 @@ function ProblemSolvingPage() {
     setIsConsoleExpanded(true);
     setConsoleTab("result");
     setSelectedTestCase(0);
+    // Reset performance rating on new submission
+    setIsAllPassed(false);
+    setPerfRatingState(null);
+    setLastAcceptedSubmissionId(null);
     try {
       const data = await runProblemCode(problemId, {
         code,
@@ -327,6 +340,16 @@ function ProblemSolvingPage() {
       
       if (allPassed) {
         toast.success("All test cases passed! Submitted successfully.");
+        // Asynchronously update performance ratings in background
+        (async () => {
+          try {
+            const subData = await getProblemSubmissions(problemId);
+            const latestAccepted = (subData.submissions || []).find(s => s.verdict === 'Accepted');
+            if (latestAccepted?._id) {
+              await rateSubmissionPerformance(problemId, { submissionId: latestAccepted._id });
+            }
+          } catch (_) { /* background task */ }
+        })();
       } else {
         toast.error("Some test cases failed.");
       }
@@ -621,9 +644,35 @@ function ProblemSolvingPage() {
                       </div>
                       <div className="problem-header-top">
                         <h1 className="problem-display-title">{problem.title}</h1>
-                        <span className={`problem-display-difficulty ${problem.difficulty}`}>
-                          {problem.difficulty}
-                        </span>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                          <span className={`problem-display-difficulty ${problem.difficulty}`}>
+                            {problem.difficulty}
+                          </span>
+                          {(() => {
+                            const r = Number(problem.rating) || (problem.difficulty === "hard" ? 1900 : problem.difficulty === "medium" ? 1400 : 800);
+                            const color = r < 1200 ? "#0ea5e9" : r < 1400 ? "#10b981" : r < 1600 ? "#06b6d4" : r < 1900 ? "#6366f1" : r < 2200 ? "#a855f7" : r < 2500 ? "#f59e0b" : "#ef4444";
+                            return (
+                              <span
+                                style={{
+                                  color,
+                                  background: `${color}18`,
+                                  border: `1px solid ${color}38`,
+                                  fontSize: "0.8rem",
+                                  fontWeight: 700,
+                                  padding: "3px 8px",
+                                  borderRadius: "6px",
+                                  letterSpacing: "0.02em",
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: "2px"
+                                }}
+                                title={`Problem Rating: *${r}`}
+                              >
+                                *{r}
+                              </span>
+                            );
+                          })()}
+                        </div>
                       </div>
                       <p className="problem-display-subtitle">
                         Read the statement, spot the pattern, and push the cleanest accepted solution you can.
@@ -1044,7 +1093,7 @@ function ProblemSolvingPage() {
                       )}
                     </div>
                   ) : (
-                    <div className="console-result-content">
+                        <div className="console-result-content">
                       {(isRunning || isSubmitting) ? (
                         <div className="loading-results anim-pulse">
                           <Loader2 size={24} className="anim-spin" />

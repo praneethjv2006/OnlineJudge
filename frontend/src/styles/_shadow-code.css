@@ -342,22 +342,24 @@
   display: inline-flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
-  margin-top: 12px;
+  gap: 12px;
+  margin-top: 28px;
   background: transparent;
   border: none;
   cursor: pointer;
   padding: 0;
-  opacity: 0.55;
-  transition: opacity 0.2s ease;
+  opacity: 0.8;
+  transition: all 0.3s ease;
+  align-self: flex-start;
 }
 
 .sc-scroll-hint:hover {
   opacity: 1;
+  transform: translateY(4px);
 }
 
 .sc-scroll-hint-label {
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -365,14 +367,16 @@
 }
 
 .sc-scroll-arrow {
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  border: 1px solid rgba(255, 161, 22, 0.35);
+  border: 1px solid rgba(255, 161, 22, 0.4);
+  background: rgba(255, 161, 22, 0.08);
   display: flex;
   align-items: center;
   justify-content: center;
   animation: sc-arrow-bounce 1.8s ease-in-out infinite;
+  box-shadow: 0 0 16px rgba(255, 161, 22, 0.2);
 }
 
 .sc-scroll-arrow-icon {
@@ -385,5 +389,52 @@
 
 @keyframes sc-arrow-bounce {
   0%, 100% { transform: translateY(0); }
-  50%       { transform: translateY(5px); }
+  50%       { transform: translateY(6px); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SHADOW CODE HOME SECTION (CONTAINING BEGIN BUTTON)
+   ═══════════════════════════════════════════════════════════════════════════ */
+.sc-dojo-home-section {
+  position: relative;
+  z-index: 10;
+  width: calc(100% - 48px);
+  max-width: 800px;
+  margin: 40px auto 80px;
+  padding: 44px 32px;
+  background: rgba(15, 15, 22, 0.85);
+  border: 1px solid rgba(255, 161, 22, 0.25);
+  border-radius: 24px;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.7), 0 0 40px rgba(255, 161, 22, 0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 20px;
+}
+
+.sc-begin-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 48px;
+  background: linear-gradient(135deg, var(--accent), #ff6d00);
+  color: #1a0a00;
+  font-size: 1.2rem;
+  font-weight: 800;
+  border: none;
+  border-radius: 16px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: all 0.25s ease;
+  box-shadow: 0 10px 36px rgba(255, 161, 22, 0.35);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.sc-begin-btn:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 18px 50px rgba(255, 161, 22, 0.5);
 }

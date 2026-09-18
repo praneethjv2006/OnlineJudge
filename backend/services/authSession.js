@@ -3,14 +3,13 @@ const User = require("../models/User");
 
 const accessTokenSecret = process.env.JWT_ACCESS_SECRET || "dev_access_secret";
 const refreshTokenSecret = process.env.JWT_REFRESH_SECRET || "dev_refresh_secret";
-const accessTokenExpiry = process.env.JWT_ACCESS_EXPIRES_IN || "1h"; // Increased to 1 hour for better UX
+const accessTokenExpiry = process.env.JWT_ACCESS_EXPIRES_IN || "1h";
 const refreshTokenExpiry = process.env.JWT_REFRESH_EXPIRES_IN || "7d";
 const isProduction = process.env.NODE_ENV === "production";
 
 const cookieOptions = {
   httpOnly: true,
-  // The frontend and API use different origins in production. Cross-origin
-  // refresh calls require SameSite=None, which browsers only accept on HTTPS.
+  // Cross-origin refresh calls require SameSite=None on HTTPS
   sameSite: isProduction ? "none" : "lax",
   secure: isProduction,
   path: "/",
@@ -22,6 +21,7 @@ const buildTokens = (user) => {
     id: user._id.toString(),
     email: user.email,
     name: user.name,
+    role: user.role || "user",
   };
 
   const accessToken = jwt.sign(payload, accessTokenSecret, {
@@ -35,10 +35,12 @@ const buildTokens = (user) => {
   return { accessToken, refreshToken };
 };
 
+// Returns a safe user object to send to the client (no password/token)
 const safeUser = (user) => ({
   id: user._id,
   name: user.name,
   email: user.email,
+  role: user.role || "user",
   createdAt: user.createdAt,
   updatedAt: user.updatedAt,
 });

@@ -162,7 +162,7 @@ function UpcomingCard({ contest, onJoin, isJoining }) {
 }
 
 // ─── Live Contest Card ────────────────────────────────────────────────────────
-function LiveCard({ contest, onJoin, isJoining }) {
+function LiveCard({ contest, onJoin, isJoining, onLeaderboard }) {
   const [tick, setTick] = useState(Date.now());
   useEffect(() => {
     const iv = setInterval(() => setTick(Date.now()), 1000);
@@ -199,13 +199,18 @@ function LiveCard({ contest, onJoin, isJoining }) {
           <div className="creator-avatar">{(contest.createdBy?.name || "O")[0]}</div>
           <span>{contest.createdBy?.name || "Organizer"}</span>
         </div>
-        <button
-          className="pro-card-btn join-live-btn"
-          onClick={() => onJoin(contest._id)}
-          disabled={isJoining}
-        >
-          <Play size={13} /> Enter <ChevronRight size={14} />
-        </button>
+        <div className="completed-actions">
+          <button className="pro-card-btn leaderboard-btn" onClick={() => onLeaderboard(contest)}>
+            <Medal size={13} /> Standings
+          </button>
+          <button
+            className="pro-card-btn join-live-btn"
+            onClick={() => onJoin(contest._id)}
+            disabled={isJoining}
+          >
+            <Play size={13} /> Enter <ChevronRight size={14} />
+          </button>
+        </div>
       </div>
     </article>
   );
@@ -448,7 +453,13 @@ function ContestsPage() {
           ) : (
             <div className="contest-pro-grid">
               {grouped.live.map((contest) => (
-                <LiveCard key={contest._id} contest={contest} onJoin={handleJoin} isJoining={isJoining} />
+                <LiveCard
+                  key={contest._id}
+                  contest={contest}
+                  onJoin={handleJoin}
+                  isJoining={isJoining}
+                  onLeaderboard={setSelectedLeaderboard}
+                />
               ))}
             </div>
           )
@@ -486,6 +497,7 @@ function ContestsPage() {
         <ContestLeaderboardModal
           contestId={selectedLeaderboard._id}
           contestTitle={selectedLeaderboard.title}
+          contestStatus={selectedLeaderboard.status}
           onClose={() => setSelectedLeaderboard(null)}
         />
       )}

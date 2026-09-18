@@ -2,16 +2,29 @@ const mongoose = require("mongoose");
 
 const testCaseSchema = new mongoose.Schema(
   {
+    // input can be empty string for problems with no stdin
     input: {
       type: String,
-      required: true,
-      trim: true,
+      default: "",
+      trim: false,
     },
     expectedOutput: {
       type: String,
       required: true,
       trim: true,
     },
+  },
+  { _id: false }
+);
+
+// 5 cognitive skill ratings (0–100) — admin-settable
+const cognitiveRatingsSchema = new mongoose.Schema(
+  {
+    patternRecognition:    { type: Number, default: 0, min: 0, max: 100 },
+    optimizationAbility:   { type: Number, default: 0, min: 0, max: 100 },
+    mathematicalReasoning: { type: Number, default: 0, min: 0, max: 100 },
+    logicFlowDebugging:    { type: Number, default: 0, min: 0, max: 100 },
+    memoryComplexity:      { type: Number, default: 0, min: 0, max: 100 },
   },
   { _id: false }
 );
@@ -121,6 +134,7 @@ const problemSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    cognitiveRatings: { type: cognitiveRatingsSchema, default: () => ({}) },
   },
   {
     timestamps: true,

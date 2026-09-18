@@ -13,10 +13,11 @@ const normalizeProblemInput = (body = {}) => {
   const testCases = Array.isArray(body.testCases)
     ? body.testCases
         .map((testCase) => ({
-          input: cleanText(testCase?.input),
+          // Allow empty-string input for problems without stdin
+          input: testCase?.input ?? "",
           expectedOutput: cleanText(testCase?.expectedOutput),
         }))
-        .filter((testCase) => testCase.input && testCase.expectedOutput)
+        .filter((testCase) => testCase.expectedOutput)
     : [];
   const examples = Array.isArray(body.examples)
     ? body.examples
@@ -548,6 +549,35 @@ const deleteProblem = async (req, res) => {
   }
 };
 
+// Admin-only: update cognitive skill ratings on a problem
+const updateCognitiveRatings = async (req, res) => {
+  try {
+    const requester = await resolveUserFromAccessToken(req);
+    if (!requester || requester.role !== "admin") {
+      return res.status(403).json({ message: "Only admins can update cognitive ratings." });
+    }
+
+    const problem = await Problem.findById(req.params.id);
+    if (!problem) return res.status(404).json({ message: "Problem not found." });
+
+    const ratings = req.body.cognitiveRatings || {};
+    const VALID_KEYS = ["patternRecognition", "optimizationAbility", "mathematicalReasoning", "logicFlowDebugging", "memoryComplexity"];
+    const filtered = {};
+    VALID_KEYS.forEach((key) => {
+      if (ratings[key] !== undefined) {
+        const val = Number(ratings[key]);
+        if (!isNaN(val)) filtered[key] = Math.min(100, Math.max(0, val));
+      }
+    });
+
+    problem.cognitiveRatings = { ...((problem.cognitiveRatings || {}).toObject ? problem.cognitiveRatings.toObject() : problem.cognitiveRatings || {}), ...filtered };
+    await problem.save();
+    return res.json({ message: "Cognitive ratings updated.", problem });
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to update cognitive ratings.", error: error.message });
+  }
+};
+
 module.exports = {
   listProblems,
   createProblem,
@@ -557,4 +587,5 @@ module.exports = {
   getProblemSubmissions,
   analyzeCode,
   deleteProblem,
+  updateCognitiveRatings,
 };

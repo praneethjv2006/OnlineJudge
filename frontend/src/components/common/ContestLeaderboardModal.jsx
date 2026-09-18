@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAppContext } from "../../App";
 import { loadContestLeaderboard } from "../../services/contestService";
 import { getErrorMessage } from "../../services/api";
-import { X, Trophy, Medal, Clock, CheckCircle2, Loader2 } from "lucide-react";
+import { X, Trophy, Medal, Clock, CheckCircle2, Loader2, RotateCcw, Search, Zap } from "lucide-react";
 
 const RANK_STYLES = [
   { bg: "linear-gradient(135deg, #FFD700, #FFA500)", color: "#000", label: "🥇" },
@@ -17,28 +17,43 @@ function formatPenalty(minutes) {
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
 
-function ContestLeaderboardModal({ contestId, contestTitle, onClose }) {
+function ContestLeaderboardModal({ contestId, contestTitle, contestStatus = "ended", onClose }) {
   const { user } = useAppContext();
   const [leaderboard, setLeaderboard] = useState([]);
   const [questions, setQuestions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+  const [refreshIn, setRefreshIn] = useState(20);
+
+  const fetchLeaderboard = useCallback(async (quiet = false) => {
+    if (!quiet) setIsLoading(true);
+    try {
+      const data = await loadContestLeaderboard(contestId);
+      setLeaderboard(data.leaderboard || []);
+      setQuestions(data.questions || []);
+      setError("");
+      setRefreshIn(20);
+    } catch (err) {
+      if (!quiet) {
+        setError(getErrorMessage(err, "Failed to load leaderboard."));
+      }
+    } finally {
+      if (!quiet) setIsLoading(false);
+    }
+  }, [contestId]);
 
   useEffect(() => {
-    const fetchLeaderboard = async () => {
-      setIsLoading(true);
-      try {
-        const data = await loadContestLeaderboard(contestId);
-        setLeaderboard(data.leaderboard || []);
-        setQuestions(data.questions || []);
-      } catch (err) {
-        setError(getErrorMessage(err, "Failed to load leaderboard."));
-      } finally {
-        setIsLoading(false);
-      }
-    };
     fetchLeaderboard();
-  }, [contestId]);
+    if (contestStatus === "live") {
+      const iv = setInterval(() => fetchLeaderboard(true), 20000);
+      const countdown = setInterval(() => setRefreshIn((n) => (n > 0 ? n - 1 : 20)), 1000);
+      return () => {
+        clearInterval(iv);
+        clearInterval(countdown);
+      };
+    }
+  }, [fetchLeaderboard, contestStatus]);
 
   // Close on Escape
   useEffect(() => {
@@ -49,19 +64,55 @@ function ContestLeaderboardModal({ contestId, contestTitle, onClose }) {
 
   const myUserId = user?.id || user?._id;
 
+  const filtered = leaderboard.filter((entry) =>
+    !search.trim() || (entry.userName || "").toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
     <div className="lb-overlay" onClick={onClose}>
       <div className="lb-modal" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="lb-header">
           <div className="lb-header-left">
-            <Trophy size={20} style={{ color: "var(--accent)" }} />
+            <Trophy size={22} style={{ color: "var(--accent)" }} />
             <div>
-              <h2 className="lb-title">Leaderboard</h2>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <h2 className="lb-title">Leaderboard</h2>
+                {contestStatus === "live" ? (
+                  <span className="lb-live-badge-inline">
+                    <span className="live-pulse-dot" /> LIVE
+                  </span>
+                ) : (
+                  <span className="lb-final-badge">Final</span>
+                )}
+              </div>
               <p className="lb-subtitle">{contestTitle}</p>
             </div>
           </div>
-          <button className="lb-close" onClick={onClose}><X size={18} /></button>
+          <div className="lb-header-right-actions">
+            {contestStatus === "live" && (
+              <span className="lb-refresh-badge">Refreshes in {refreshIn}s</span>
+            )}
+            <button
+              className="lb-refresh-icon-btn"
+              onClick={() => fetchLeaderboard(false)}
+              title="Refresh standings"
+            >
+              <RotateCcw size={14} />
+            </button>
+            <div className="lb-modal-search-wrap">
+              <Search size={13} className="lb-search-icon" />
+              <input
+                className="lb-modal-search"
+                placeholder="Search user..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <button className="lb-close" onClick={onClose} aria-label="Close modal">
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
         {/* Body */}
@@ -78,6 +129,11 @@ function ContestLeaderboardModal({ contestId, contestTitle, onClose }) {
               <Trophy size={48} style={{ opacity: 0.15, marginBottom: 16 }} />
               <p>No submissions yet. Be the first to score!</p>
             </div>
+          ) : filtered.length === 0 ? (
+            <div className="lb-empty">
+              <Search size={36} style={{ opacity: 0.2, marginBottom: 12 }} />
+              <p>No participants matching &quot;{search}&quot;</p>
+            </div>
           ) : (
             <div className="lb-table-wrap">
               <table className="lb-table">
@@ -88,7 +144,7 @@ function ContestLeaderboardModal({ contestId, contestTitle, onClose }) {
                     {questions.map((q, i) => (
                       <th key={i} className="th-question" title={q.title}>
                         <span className="q-header-label">P{i + 1}</span>
-                        <span className="q-header-pts">{q.points}pt</span>
+                        <span className="q-header-pts">{q.points || 100}pt</span>
                       </th>
                     ))}
                     <th className="th-score">Score</th>
@@ -96,10 +152,11 @@ function ContestLeaderboardModal({ contestId, contestTitle, onClose }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {leaderboard.map((entry, idx) => {
+                  {filtered.map((entry, idx) => {
                     const isMe = entry.user?.toString() === myUserId?.toString() ||
                                  entry.user?._id?.toString() === myUserId?.toString();
-                    const rankStyle = RANK_STYLES[idx] || null;
+                    const rank = entry.rank || idx + 1;
+                    const rankStyle = rank <= 3 ? RANK_STYLES[rank - 1] : null;
 
                     return (
                       <tr key={entry.user || idx} className={`lb-row ${isMe ? "lb-row-me" : ""}`}>
@@ -109,7 +166,7 @@ function ContestLeaderboardModal({ contestId, contestTitle, onClose }) {
                               {rankStyle.label}
                             </span>
                           ) : (
-                            <span className="rank-num">{entry.rank || idx + 1}</span>
+                            <span className="rank-num">{rank}</span>
                           )}
                         </td>
                         <td className="td-user">

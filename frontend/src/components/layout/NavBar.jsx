@@ -13,6 +13,7 @@ import {
   Users,
   MessageSquare,
   LayoutDashboard,
+  ShieldCheck,
 } from "lucide-react";
 import { getRequestCount } from "../../services/friendService";
 import FriendsPanel from "../social/FriendsPanel";
@@ -96,6 +97,11 @@ function NavBar({ user, onSignOut }) {
           <NavLink to="/dashboard" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
             <Activity size={18} /><span>Dashboard</span>
           </NavLink>
+          {user?.role === "admin" && (
+            <NavLink to="/admin" className={({ isActive }) => isActive ? "nav-item nav-item-admin active" : "nav-item nav-item-admin"}>
+              <ShieldCheck size={18} /><span>Admin</span>
+            </NavLink>
+          )}
         </nav>
 
         <div className="nav-right-section">
@@ -150,6 +156,9 @@ function NavBar({ user, onSignOut }) {
                       <div className="header-meta">
                         <span className="full-name">{user?.name || "User"}</span>
                         <span className="user-email">{user?.email || "active session"}</span>
+                        {user?.role === "admin" && (
+                          <span className="admin-badge-inline">Admin</span>
+                        )}
                       </div>
                     </div>
                     <div className="dropdown-divider" />
@@ -175,6 +184,11 @@ function NavBar({ user, onSignOut }) {
                     <button type="button" className="dropdown-item" onClick={() => navTo("/shadow-code")}>
                       <Swords size={16} /><span>Shadow Code</span>
                     </button>
+                    {user?.role === "admin" && (
+                      <button type="button" className="dropdown-item dropdown-item-admin" onClick={() => navTo("/admin")}>
+                        <ShieldCheck size={16} /><span>Admin Portal</span>
+                      </button>
+                    )}
 
                     <div className="dropdown-divider" />
 

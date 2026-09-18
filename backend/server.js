@@ -11,10 +11,23 @@ const problemRoutes = require("./routes/problemRoutes");
 const friendRoutes = require("./routes/friendRoutes");
 const chatRoutes = require("./routes/chatRoutes");
 const { ipRateLimiter } = require("./middleware/rateLimiter");
+
+if (
+  process.env.NODE_ENV === "production" &&
+  (!process.env.JWT_ACCESS_SECRET || !process.env.JWT_REFRESH_SECRET || !process.env.MONGO_URI)
+) {
+  throw new Error("MONGO_URI, JWT_ACCESS_SECRET, and JWT_REFRESH_SECRET are required in production.");
+}
 //console.log("MONGO_URI:", process.env.MONGO_URI);
 connectDB();
 
 const app = express();
+
+// Cloudflare Tunnel is the public HTTPS proxy in production. Trust exactly one
+// proxy hop so req.ip remains the visitor IP for the rate limiter.
+if (process.env.TRUST_PROXY === "true") {
+  app.set("trust proxy", 1);
+}
 
 // Security Headers
 app.use((req, res, next) => {

@@ -60,3 +60,8 @@ export const searchProblems = async (query = "") => {
   const response = await api.get(`/problems${query ? `?search=${encodeURIComponent(query)}` : ""}`);
   return response.data.problems || [];
 };
+
+export const inviteToContest = async (contestId, payload) => {
+  const response = await api.post(`/contests/${contestId}/invite`, payload);
+  return response.data;
+};

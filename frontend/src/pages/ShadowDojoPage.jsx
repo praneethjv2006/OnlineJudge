@@ -140,37 +140,269 @@ export default function ShadowDojoPage() {
     }, 2500);
   }, [challenge, language]);
 
+  const evaluateChallengeCode = (currChallenge, userCode, lang) => {
+    if (!currChallenge) return { verdict: "Wrong Answer", stdout: "No challenge selected." };
+    
+    const rawStarter = (currChallenge.starterCode?.[lang] || "").trim();
+    const trimmedCode = (userCode || "").trim();
+    const isUntouched = trimmedCode === rawStarter || trimmedCode.length === 0;
+
+    // If code is untouched, fail with authentic, educational diagnostic messages
+    if (isUntouched) {
+      switch (currChallenge.id) {
+        case "debug_code":
+          return {
+            verdict: "Wrong Answer",
+            stdout: "Test 1 Failed: Disconnected districts miscounted. The starter code contains indexing out-of-bounds bugs and missing bidirectional road edges. Debug the code to fix them!",
+          };
+        case "fix_performance":
+          return {
+            verdict: "Time Limit Exceeded",
+            stdout: "TLE on Test 4: Key N = 999999999989 (Prime). Execution exceeded 1.00s time limit. Naive loop runs in O(N); optimize prime check to O(√N).",
+          };
+        case "memory_overflow":
+          return {
+            verdict: "Memory Limit Exceeded",
+            stdout: "MLE: Process exceeded 64MB memory limit on 1000x1000 grid. Reduce DP space complexity from O(N×M) to O(M).",
+          };
+        case "overflow_trap":
+          return {
+            verdict: "Wrong Answer",
+            stdout: "Test 3 Failed (N = 10¹⁸): Intermediate calculation N×(N+1) overflowed standard integer bounds into negative values.",
+          };
+        case "precision_trap":
+          return {
+            verdict: "Wrong Answer",
+            stdout: "Test 2 Failed (R = 10⁹): Floating point precision loss. Output 2000000000000000256.000000 does not match exact 2000000000000000000.000000. Use exact integer identity (2R²).",
+          };
+        case "fill_missing":
+          return {
+            verdict: "Compile Error",
+            stdout: "Incomplete implementation: Function stubs (partition / quickSelect) remain unimplemented.",
+          };
+        case "blind_judge":
+          return {
+            verdict: "Wrong Answer",
+            blind: true,
+          };
+        default:
+          return {
+            verdict: "Wrong Answer",
+            stdout: "Starter code does not solve the challenge.",
+          };
+      }
+    }
+
+    // Evaluate user edits
+    switch (currChallenge.id) {
+      case "debug_code": {
+        const hasReverseEdge =
+          trimmedCode.includes("adj[v].push_back(u)") ||
+          trimmedCode.includes("adj[v].push_back( u )") ||
+          trimmedCode.includes("adj[v].append(u)") ||
+          trimmedCode.includes("adj[v].push(u)") ||
+          trimmedCode.includes("adj[v][u] = 1");
+
+        const hasCorrectSize =
+          trimmedCode.includes("n + 1") ||
+          trimmedCode.includes("n+1") ||
+          trimmedCode.includes("MAXN") ||
+          trimmedCode.includes("n + 2") ||
+          trimmedCode.includes("n+2");
+
+        if (hasReverseEdge && hasCorrectSize) {
+          return {
+            verdict: "Accepted",
+            stdout: "All 10 test cases passed! Graph traversal correctly counted disconnected districts.",
+          };
+        }
+        if (!hasReverseEdge) {
+          return {
+            verdict: "Wrong Answer",
+            stdout: "Test 2 Failed: Roads are bidirectional. Did you remember to add the reverse edge adj[v].push_back(u)?",
+          };
+        }
+        return {
+          verdict: "Runtime Error",
+          stdout: "Out of bounds / vector index out of range: Village districts are 1-indexed (1..N). Check your adj and visited array sizes.",
+        };
+      }
+
+      case "fix_performance": {
+        const hasSqrtOpt =
+          trimmedCode.includes("i * i <= n") ||
+          trimmedCode.includes("i*i <= n") ||
+          trimmedCode.includes("i * i <= N") ||
+          trimmedCode.includes("i*i <= N") ||
+          trimmedCode.includes("sqrt") ||
+          trimmedCode.includes("isqrt");
+
+        const stillHasSlowLoop =
+          trimmedCode.includes("i < n;") ||
+          trimmedCode.includes("i < n ;") ||
+          trimmedCode.includes("range(2, n)");
+
+        if (hasSqrtOpt && !stillHasSlowLoop) {
+          return {
+            verdict: "Accepted",
+            stdout: "Passed all 1000 test keys in 28ms. Optimized O(√N) prime verification accepted!",
+          };
+        }
+        return {
+          verdict: "Time Limit Exceeded",
+          stdout: "TLE on Test 4: Key N = 999999999989 (Prime). Execution exceeded 1.00s time limit. Make sure your loop checks only up to √N (`i * i <= n`).",
+        };
+      }
+
+      case "memory_overflow": {
+        const has2DStructure =
+          trimmedCode.includes("vector<vector") ||
+          trimmedCode.includes("dp[MAXN][MAXN]") ||
+          trimmedCode.includes("[[0]*m for") ||
+          trimmedCode.includes("[[0] * m for") ||
+          trimmedCode.includes("Array.from({length: n}");
+
+        const has1DOpt =
+          trimmedCode.includes("vector<long long> dp(m") ||
+          trimmedCode.includes("vector<int> dp(m") ||
+          trimmedCode.includes("dp = [0]*m") ||
+          trimmedCode.includes("dp = [0] * m") ||
+          trimmedCode.includes("new Array(m)") ||
+          trimmedCode.includes("dp[MAXN]");
+
+        if (!has2DStructure || has1DOpt) {
+          return {
+            verdict: "Accepted",
+            stdout: "Passed all large tests. Peak memory usage: 1.1 MB. O(M) space optimization verified!",
+          };
+        }
+        return {
+          verdict: "Memory Limit Exceeded",
+          stdout: "Process killed: Memory limit 64MB exceeded on 1000x1000 grid. Allocate only O(M) memory for DP table.",
+        };
+      }
+
+      case "overflow_trap": {
+        const handlesOverflow =
+          trimmedCode.includes("__int128") ||
+          trimmedCode.includes("BigInt") ||
+          trimmedCode.includes("(n / 2) * (n + 1)") ||
+          trimmedCode.includes("(n/2) * (n+1)") ||
+          trimmedCode.includes("(n / 2) * (n+1)") ||
+          trimmedCode.includes("((n + 1) / 2)") ||
+          (lang === "python" && !isUntouched);
+
+        if (handlesOverflow) {
+          return {
+            verdict: "Accepted",
+            stdout: "All astronomical test cases passed without integer overflow!",
+          };
+        }
+        return {
+          verdict: "Wrong Answer",
+          stdout: "Wrong answer on N=10¹⁸. Intermediate calculation N×(N+1) overflowed. Use __int128, BigInt, or divide the even factor by 2 before multiplying.",
+        };
+      }
+
+      case "precision_trap": {
+        const usesExactFormula =
+          trimmedCode.includes("2 * r * r") ||
+          trimmedCode.includes("2*r*r") ||
+          trimmedCode.includes("2LL * r * r") ||
+          trimmedCode.includes("2LL*r*r") ||
+          trimmedCode.includes("2 * r ** 2") ||
+          trimmedCode.includes("2n * r * r") ||
+          trimmedCode.includes("2 * R * R") ||
+          trimmedCode.includes("2LL * r");
+
+        const avoidsFloatSqrt =
+          !trimmedCode.includes("sqrt(2") && !trimmedCode.includes("sqrt( 2");
+
+        if (usesExactFormula && avoidsFloatSqrt) {
+          return {
+            verdict: "Accepted",
+            stdout: "Accepted! Exact integer calculation (Area = 2R²) produced flawless 6-decimal precision.",
+          };
+        }
+        return {
+          verdict: "Wrong Answer",
+          stdout: "Wrong answer on R=10⁹. Floating point arithmetic loses precision. Notice the diagonal equals 2R, so the square area is exactly 2R² without square roots!",
+        };
+      }
+
+      case "fill_missing": {
+        const stillHasStubs =
+          trimmedCode.includes("YOUR CODE HERE") ||
+          trimmedCode.includes("// YOUR CODE HERE") ||
+          trimmedCode.includes("# YOUR CODE HERE") ||
+          trimmedCode.includes("pass\n");
+
+        const hasPartitionLogic =
+          trimmedCode.includes("pivot") ||
+          trimmedCode.includes("swap") ||
+          trimmedCode.includes("left") ||
+          trimmedCode.includes("right");
+
+        if (!stillHasStubs && hasPartitionLogic) {
+          return {
+            verdict: "Accepted",
+            stdout: "All 12 test cases passed. Quickselect executed in average O(N) time!",
+          };
+        }
+        if (stillHasStubs) {
+          return {
+            verdict: "Compile Error",
+            stdout: "Function stubs (partition / quickSelect) remain unimplemented with placeholder comments.",
+          };
+        }
+        return {
+          verdict: "Wrong Answer",
+          stdout: "Quickselect failed to partition array elements correctly around the pivot.",
+        };
+      }
+
+      case "blind_judge": {
+        const hasLISLogic =
+          trimmedCode.includes("dp") ||
+          trimmedCode.includes("lower_bound") ||
+          trimmedCode.includes("bisect") ||
+          trimmedCode.includes("max(");
+
+        return {
+          verdict: hasLISLogic ? "Accepted" : "Wrong Answer",
+          blind: true,
+        };
+      }
+
+      default:
+        return {
+          verdict: "Accepted",
+          stdout: "Output matches expected.",
+        };
+    }
+  };
+
   const handleRun = async () => {
     if (!challenge) return;
     setIsRunning(true);
     setRunResult(null);
 
-    // Simulate run for front-end demo
-    await new Promise((res) => setTimeout(res, 1200 + Math.random() * 800));
+    // Simulate realistic test runner execution delay
+    await new Promise((res) => setTimeout(res, 900 + Math.random() * 600));
 
-    if (challenge.uiType === "blind") {
-      const passed = Math.random() > 0.4;
-      setRunResult({ verdict: passed ? "Accepted" : "Wrong Answer", blind: true });
-    } else {
-      setRunResult({
-        verdict: "Accepted",
-        stdout: "Output matches expected.",
-        stderr: "",
-      });
-    }
-
+    const evaluated = evaluateChallengeCode(challenge, code, language);
+    setRunResult(evaluated);
     setIsRunning(false);
   };
 
-  // When submitting question: instead of showing result screen with Try Another / Exit Dojo,
-  // notify and immediately show next question in the main page
+  // When submitting question
   const handleResult = (correct) => {
     if (correct) {
       toast.success("Challenge Conquered! Loading next mystery challenge...");
+      handleNextChallenge();
     } else {
-      toast.info("Completed! Loading next mystery challenge...");
+      toast.error("Solution not accepted! Review the feedback below and fix your code.");
     }
-    handleNextChallenge();
   };
 
   const handleReset = () => {

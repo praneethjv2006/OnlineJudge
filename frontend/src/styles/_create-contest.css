@@ -1253,3 +1253,128 @@
     width: 100%;
   }
 }
+
+/* ── Cognitive Dimensions Rating & Admin Official Styles ───────────────── */
+.cp-card-admin {
+  border-color: rgba(124, 58, 237, 0.35);
+  background: linear-gradient(180deg, rgba(28, 20, 48, 0.4), rgba(18, 18, 22, 0.6));
+}
+
+.cp-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  user-select: none;
+  padding: 8px 4px;
+}
+
+.cp-toggle-checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent, #7c3aed);
+  cursor: pointer;
+}
+
+.cp-toggle-text {
+  font-size: 0.92rem;
+  color: #e2e8f0;
+}
+
+.cp-toggle-text strong {
+  color: #c084fc;
+}
+
+.cp-cognitive-section {
+  margin-top: 18px;
+  padding: 16px 18px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+}
+
+.cp-cognitive-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.cp-admin-chip {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(124, 58, 237, 0.2);
+  color: #c084fc;
+  border: 1px solid rgba(124, 58, 237, 0.4);
+}
+
+.cp-readonly-chip {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #94a3b8;
+}
+
+.cp-hint-inline {
+  font-size: 0.76rem;
+  color: #71717a;
+}
+
+.cp-cognitive-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+}
+
+.cp-cog-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.cp-cog-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.cp-cog-label-row strong {
+  color: #eff1f6;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.85rem;
+}
+
+.cp-cog-slider {
+  width: 100%;
+  accent-color: var(--accent, #7c3aed);
+  cursor: pointer;
+  height: 4px;
+}
+
+.cp-cog-bar-track {
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.cp-cog-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #7c3aed, #a855f7);
+}
+

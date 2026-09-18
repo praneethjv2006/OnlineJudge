@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAppContext } from "../App";
 import { createContest, searchProblems } from "../services/contestService";
 import { getErrorMessage } from "../services/api";
 import {
   ArrowLeft, ArrowRight, Plus, Trash2, Search, CheckCircle2,
   Clock, Database, Cpu, ChevronDown, ChevronUp, Globe, Lock,
   Calendar, BookOpen, Pencil, X, Check, AlertCircle, Award,
-  Sparkles, Layers
+  Sparkles, Layers, ShieldCheck, Zap
 } from "lucide-react";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -20,6 +21,13 @@ const createNewQuestion = () => ({
   difficulty: "medium",
   tags: "",
   points: 200,
+  cognitiveRatings: {
+    algorithmicThinking: 1200,
+    problemSolving: 1200,
+    optimization: 1200,
+    edgeCaseAnalysis: 1200,
+    speedComplexity: 1200,
+  },
   testCases: [createTestCase()],
   _mode: "new",    // "new" | "existing"
   _expanded: true,
@@ -174,7 +182,7 @@ function ProblemPickerModal({ onSelect, onClose, alreadyAdded }) {
 }
 
 // ─── Single Question Card (LeetCode Contest Problem Card) ─────────────────────
-function QuestionCard({ question, index, onUpdate, onRemove }) {
+function QuestionCard({ question, index, onUpdate, onRemove, isAdmin }) {
   const [expanded, setExpanded] = useState(question._expanded !== false);
   const dc = DIFF_COLORS[question.difficulty] || DIFF_COLORS.medium;
   const isExisting = question._mode === "existing";
@@ -352,6 +360,66 @@ function QuestionCard({ question, index, onUpdate, onRemove }) {
             </div>
           </div>
 
+          {/* Cognitive Ratings (Admin-only editable) */}
+          <div className="cp-cognitive-section">
+            <div className="cp-cognitive-header">
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <ShieldCheck size={14} style={{ color: "var(--accent)" }} />
+                <span className="cp-label" style={{ margin: 0 }}>Cognitive Dimension Ratings</span>
+                {isAdmin ? (
+                  <span className="cp-admin-chip">Admin Calibration</span>
+                ) : (
+                  <span className="cp-readonly-chip">System Calibrated</span>
+                )}
+              </div>
+              <span className="cp-hint-inline">Scale: 800 (Intro) - 2800 (Grandmaster)</span>
+            </div>
+
+            <div className="cp-cognitive-grid">
+              {[
+                { key: "algorithmicThinking", label: "Algorithmic Thinking" },
+                { key: "problemSolving", label: "Problem Solving" },
+                { key: "optimization", label: "Optimization" },
+                { key: "edgeCaseAnalysis", label: "Edge Cases" },
+                { key: "speedComplexity", label: "Speed & Complexity" },
+              ].map(({ key, label }) => {
+                const val = question.cognitiveRatings?.[key] ?? 1200;
+                return (
+                  <div key={key} className="cp-cog-item">
+                    <div className="cp-cog-label-row">
+                      <span>{label}</span>
+                      <strong>{val}</strong>
+                    </div>
+                    {isAdmin ? (
+                      <input
+                        type="range"
+                        min="800"
+                        max="2800"
+                        step="50"
+                        value={val}
+                        onChange={(e) => {
+                          const updated = {
+                            ...(question.cognitiveRatings || {}),
+                            [key]: Number(e.target.value),
+                          };
+                          onUpdate(index, "cognitiveRatings", updated);
+                        }}
+                        className="cp-cog-slider"
+                      />
+                    ) : (
+                      <div className="cp-cog-bar-track">
+                        <div
+                          className="cp-cog-bar-fill"
+                          style={{ width: `${Math.min(100, Math.max(10, ((val - 800) / 2000) * 100))}%` }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Test cases (For custom problems) */}
           {!isExisting && (
             <div className="cp-testcases">
@@ -428,19 +496,23 @@ function QuestionCard({ question, index, onUpdate, onRemove }) {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 function CreateContestPage() {
   const navigate = useNavigate();
+  const { user } = useAppContext();
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [showPicker, setShowPicker] = useState(false);
+  const isAdmin = user?.role === "admin";
 
-  // Step 1 — Contest settings
-  const [settings, setSettings] = useState({
+  // Step 1 — Contest settings: admins default to public, regular users default to private
+  const [settings, setSettings] = useState(() => ({
     title: "",
     description: "",
-    visibility: "public",
+    visibility: user?.role === "admin" ? "public" : "private",
     durationMinutes: 120,
+    timingMode: "now", // "now" | "scheduled"
     scheduledAt: "",
-  });
+    isOfficial: false,
+  }));
 
   // Step 2 — Questions
   const [questions, setQuestions] = useState([]);
@@ -466,6 +538,13 @@ function CreateContestPage() {
       difficulty: problem.difficulty || "medium",
       tags: (problem.tags || []).join(", "),
       points: problem.difficulty === "hard" ? 300 : problem.difficulty === "medium" ? 200 : 100,
+      cognitiveRatings: problem.cognitiveRatings || {
+        algorithmicThinking: 1200,
+        problemSolving: 1200,
+        optimization: 1200,
+        edgeCaseAnalysis: 1200,
+        speedComplexity: 1200,
+      },
       testCases: problem.testCases || [createTestCase()],
       _mode: "existing",
       _expanded: false,
@@ -496,6 +575,12 @@ function CreateContestPage() {
   const validateStep1 = () => {
     if (!settings.title.trim()) return "Contest title is required.";
     if (!settings.durationMinutes || settings.durationMinutes < 15) return "Duration must be at least 15 minutes.";
+    if (settings.timingMode === "scheduled" && !settings.scheduledAt) {
+      return "Please select a scheduled start date & time, or choose Start Now.";
+    }
+    if (settings.visibility === "public" && !isAdmin) {
+      return "Only administrators can create public contests. Please select Private Room.";
+    }
     return null;
   };
 
@@ -545,6 +630,7 @@ function CreateContestPage() {
           difficulty: q.difficulty,
           tags: q.tags ? q.tags.split(",").map((t) => t.trim()).filter(Boolean) : [],
           points: q.points,
+          cognitiveRatings: q.cognitiveRatings || {},
           testCases: q.testCases,
         }));
 
@@ -553,7 +639,9 @@ function CreateContestPage() {
         description: settings.description.trim(),
         visibility: settings.visibility,
         durationMinutes: settings.durationMinutes,
-        scheduledAt: settings.scheduledAt || undefined,
+        startNow: settings.timingMode === "now",
+        scheduledAt: settings.timingMode === "scheduled" ? (settings.scheduledAt || undefined) : undefined,
+        isOfficial: Boolean(user?.role === "admin" && settings.isOfficial),
         questions: inlineQuestions,
         existingProblemIds,
       };
@@ -659,13 +747,22 @@ function CreateContestPage() {
                 <div className="cp-vis-group">
                   <button
                     type="button"
-                    className={`cp-vis-btn ${settings.visibility === "public" ? "active" : ""}`}
-                    onClick={() => setSettings((s) => ({ ...s, visibility: "public" }))}
+                    className={`cp-vis-btn ${settings.visibility === "public" ? "active" : ""} ${!isAdmin ? "cp-vis-btn-disabled" : ""}`}
+                    onClick={() => {
+                      if (isAdmin) setSettings((s) => ({ ...s, visibility: "public" }));
+                    }}
+                    disabled={!isAdmin}
+                    title={!isAdmin ? "Public contests are reserved for Administrators." : ""}
                   >
                     <div className="cp-vis-btn-top">
                       <Globe size={18} /> Public Contest
+                      {!isAdmin && <span className="cp-admin-lock-pill">Admin Only</span>}
                     </div>
-                    <span className="cp-vis-desc">Open for all registered community members to join directly</span>
+                    <span className="cp-vis-desc">
+                      {isAdmin
+                        ? "Open for all registered community members to discover and join"
+                        : "Reserved for administrators to host official platform rounds"}
+                    </span>
                   </button>
 
                   <button
@@ -676,7 +773,9 @@ function CreateContestPage() {
                     <div className="cp-vis-btn-top">
                       <Lock size={18} /> Private Room
                     </div>
-                    <span className="cp-vis-desc">Restricted access; requires an exclusive 6-character room code</span>
+                    <span className="cp-vis-desc">
+                      Exclusive contest — invite your friends directly or share the 6-character room code
+                    </span>
                   </button>
                 </div>
               </div>
@@ -710,32 +809,83 @@ function CreateContestPage() {
             </div>
           </div>
 
-          {/* Section 3: Schedule */}
+          {/* Section 3: Contest Launch Mode */}
           <div className="cp-card">
             <div className="cp-card-header">
-              <h3>Schedule (Optional)</h3>
-              <p>Set an automated start timestamp or leave empty to start the competition manually</p>
+              <h3>Contest Launch & Timing</h3>
+              <p>Choose whether to launch this contest live immediately or schedule for a future date</p>
             </div>
 
-            <div className="cp-field full">
-              <label className="cp-label">
-                <Calendar size={15} style={{ color: "#ffa116" }} />
-                Scheduled Start Time
-              </label>
-              <input
-                className="cp-input"
-                type="datetime-local"
-                value={settings.scheduledAt}
-                onChange={updateSettings("scheduledAt")}
-                min={new Date().toISOString().slice(0, 16)}
-              />
-              {settings.scheduledAt && (
-                <p className="cp-hint">
-                  Contest will automatically unlock at {new Date(settings.scheduledAt).toLocaleString()} and conclude after {settings.durationMinutes} minutes.
-                </p>
-              )}
+            <div className="cp-vis-group" style={{ marginBottom: settings.timingMode === "scheduled" ? 16 : 0 }}>
+              <button
+                type="button"
+                className={`cp-vis-btn ${settings.timingMode === "now" ? "active" : ""}`}
+                onClick={() => setSettings((s) => ({ ...s, timingMode: "now" }))}
+              >
+                <div className="cp-vis-btn-top">
+                  <Zap size={18} style={{ color: "#2cbb5d" }} /> Start Now (Live Immediately)
+                </div>
+                <span className="cp-vis-desc">Contest unlocks immediately upon creation. Participants can jump in and compete.</span>
+              </button>
+
+              <button
+                type="button"
+                className={`cp-vis-btn ${settings.timingMode === "scheduled" ? "active" : ""}`}
+                onClick={() => setSettings((s) => ({ ...s, timingMode: "scheduled" }))}
+              >
+                <div className="cp-vis-btn-top">
+                  <Calendar size={18} style={{ color: "#ffa116" }} /> Schedule for Later
+                </div>
+                <span className="cp-vis-desc">Locks until scheduled start time. Displayed under Upcoming with a live countdown.</span>
+              </button>
             </div>
+
+            {settings.timingMode === "scheduled" && (
+              <div className="cp-field full" style={{ marginTop: 14 }}>
+                <label className="cp-label">
+                  <Calendar size={15} style={{ color: "#ffa116" }} />
+                  Scheduled Start Time *
+                </label>
+                <input
+                  className="cp-input"
+                  type="datetime-local"
+                  value={settings.scheduledAt}
+                  onChange={updateSettings("scheduledAt")}
+                  min={new Date().toISOString().slice(0, 16)}
+                />
+                {settings.scheduledAt && (
+                  <p className="cp-hint">
+                    Contest will automatically unlock at {new Date(settings.scheduledAt).toLocaleString()} and conclude after {settings.durationMinutes} minutes.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
+
+          {/* Section 4: Admin Controls (Official Rated Contest) */}
+          {user?.role === "admin" && (
+            <div className="cp-card cp-card-admin">
+              <div className="cp-card-header">
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <ShieldCheck size={18} style={{ color: "var(--accent)" }} />
+                  <h3>Admin: Official Rated Contest</h3>
+                </div>
+                <p>Designate this contest as an official platform round that alters user ratings</p>
+              </div>
+
+              <label className="cp-toggle-label">
+                <input
+                  type="checkbox"
+                  checked={Boolean(settings.isOfficial)}
+                  onChange={(e) => setSettings((s) => ({ ...s, isOfficial: e.target.checked }))}
+                  className="cp-toggle-checkbox"
+                />
+                <span className="cp-toggle-text">
+                  Mark as <strong>Official Rated Contest</strong> (Codeforces/LeetCode Style Rating Calculation)
+                </span>
+              </label>
+            </div>
+          )}
 
           {error && (
             <div className="cp-error">
@@ -843,6 +993,7 @@ function CreateContestPage() {
                   index={idx}
                   onUpdate={handleUpdateQuestion}
                   onRemove={handleRemoveQuestion}
+                  isAdmin={user?.role === "admin"}
                 />
               ))}
             </div>

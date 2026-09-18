@@ -23,7 +23,7 @@
 .nav-brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   text-decoration: none;
   transition: transform 0.2s ease;
 }
@@ -32,16 +32,26 @@
   transform: translateY(-1px);
 }
 
-.brand-icon {
-  width: 36px;
-  height: 36px;
-  background: linear-gradient(135deg, var(--accent), #ff8c00);
-  border-radius: 10px;
-  display: flex;
+.brand-code-symbol {
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -1px;
+  line-height: 1;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  color: #000;
-  box-shadow: 0 4px 12px rgba(255, 161, 22, 0.2);
+  user-select: none;
+}
+
+.brand-code-symbol .symbol-bracket {
+  color: #fff;
+}
+
+.brand-code-symbol .symbol-slash {
+  color: var(--accent);
+}
+
+.nav-brand:hover .brand-code-symbol {
+  filter: drop-shadow(0 0 8px rgba(255, 161, 22, 0.4));
 }
 
 .brand-text strong {

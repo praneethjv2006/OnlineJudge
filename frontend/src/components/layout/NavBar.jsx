@@ -72,9 +72,11 @@ function NavBar({ user, onSignOut }) {
     <header className="main-nav-wrapper">
       <div className="main-nav-container">
         <Link to="/home" className="nav-brand">
-          <div className="brand-icon">
-            <img src="/image.png" alt="ApexJudge" style={{ width: "24px", height: "24px", objectFit: "contain", borderRadius: "4px" }} />
-          </div>
+          <span className="brand-code-symbol">
+            <span className="symbol-bracket">&lt;</span>
+            <span className="symbol-slash">/</span>
+            <span className="symbol-bracket">&gt;</span>
+          </span>
           <div className="brand-text">
             <strong>Apex<span>Judge</span></strong>
           </div>

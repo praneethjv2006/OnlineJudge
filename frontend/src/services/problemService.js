@@ -49,3 +49,15 @@ export const deleteProblem = async (id) => {
   const response = await api.delete(`/problems/${id}`);
   return response.data;
 };
+
+// Admin: update only the cognitive ratings of a problem
+export const updateCognitiveRatings = async (id, cognitiveRatings) => {
+  const response = await api.patch(`/problems/${id}/cognitive-ratings`, { cognitiveRatings });
+  return response.data.problem;
+};
+
+// Search problems for admin/contest creation
+export const searchProblems = async (query = "") => {
+  const response = await api.get(`/problems${query ? `?search=${encodeURIComponent(query)}` : ""}`);
+  return response.data.problems || [];
+};

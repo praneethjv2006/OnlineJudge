@@ -49,3 +49,14 @@ export const signOut = async () => {
   clearSession();
   return response.data;
 };
+
+// Admin management
+export const listAdmins = async () => {
+  const response = await api.get("/auth/admin/list");
+  return response.data;
+};
+
+export const addAdmin = async (email) => {
+  const response = await api.post("/auth/admin/promote", { email });
+  return response.data;
+};

@@ -25,6 +25,7 @@ import ShadowDojoPage from "./pages/ShadowDojoPage";
 import FriendsPage from "./pages/FriendsPage";
 import MessagesPage from "./pages/MessagesPage";
 import FriendProfilePage from "./pages/FriendProfilePage";
+import AdminPage from "./pages/AdminPage";
 import { loadSession, signOut } from "./services/authService";
 import ToastContainer from "./components/common/Toast";
 import { preload3DModel } from "./utils/modelCache";
@@ -52,6 +53,21 @@ ProtectedRoute.propTypes = {
   user: PropTypes.shape({
     email: PropTypes.string,
     name: PropTypes.string,
+  }),
+};
+
+// ─── Admin-only route guard ──────────────────────────────────────────────────
+function AdminRoute({ user }) {
+  const ctx = useOutletContext();
+  if (!user) return <Navigate to="/auth" replace />;
+  if (user.role !== "admin") return <Navigate to="/home" replace />;
+  return <Outlet context={ctx} />;
+}
+
+AdminRoute.propTypes = {
+  user: PropTypes.shape({
+    email: PropTypes.string,
+    role: PropTypes.string,
   }),
 };
 
@@ -136,7 +152,12 @@ function AppRoutes() {
 
   const handleAuthenticated = (sessionUser) => {
     setUser(sessionUser);
-    navigate("/home", { replace: true });
+    // Redirect admins straight to the admin portal
+    if (sessionUser?.role === "admin") {
+      navigate("/admin", { replace: true });
+    } else {
+      navigate("/home", { replace: true });
+    }
   };
 
   const handleSignOut = async () => {
@@ -180,6 +201,11 @@ function AppRoutes() {
           <Route path="/friends" element={<FriendsPage />} />
           <Route path="/messages" element={<MessagesPage />} />
           <Route path="/profile/:userId" element={<FriendProfilePage />} />
+        </Route>
+
+        {/* Admin-only portal */}
+        <Route element={<AdminRoute user={user} />}>
+          <Route path="/admin" element={<AdminPage />} />
         </Route>
       </Route>
 

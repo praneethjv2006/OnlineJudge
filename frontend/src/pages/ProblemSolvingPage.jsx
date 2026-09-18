@@ -12,6 +12,7 @@ import Editor from "@monaco-editor/react";
 import Modal from "../components/common/Modal";
 import ProblemText from "../components/problems/ProblemText";
 import { toast } from "../components/common/Toast";
+import Spinner from "../components/common/Spinner";
 import { getErrorMessage } from "../services/api";
 import { 
   FileText, 
@@ -478,7 +479,7 @@ function ProblemSolvingPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  if (isLoading) return <div className="loading-state">Loading...</div>;
+  if (isLoading) return <div className="loading-state"><Spinner size={44} text="Loading problem…" /></div>;
   if (!problem) return <div className="error-state">{error || "Problem not found."}</div>;
 
   return (

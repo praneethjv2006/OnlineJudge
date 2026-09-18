@@ -15,6 +15,7 @@ import {
 import { useAppContext } from "../App";
 import Modal from "../components/common/Modal";
 import { toast } from "../components/common/Toast";
+import Spinner from "../components/common/Spinner";
 import ProblemEditorModal from "../components/problems/ProblemEditorModal";
 import { deleteProblem, getApiHealth, getProblems } from "../services/problemService";
 
@@ -346,7 +347,9 @@ function ProblemsPage() {
           {/* Problem Table */}
           <div className="problems-table-area">
             {loading ? (
-              <div className="loading-state">Loading problems...</div>
+              <div className="loading-state">
+                <Spinner size={40} text="Loading problems…" />
+              </div>
             ) : filteredProblems.length === 0 ? (
               <div className="empty-state panel">
                 <h3>No problems found</h3>

@@ -10,6 +10,17 @@ const {
   resolveUserFromRefreshToken,
 } = require("../services/authSession");
 
+// Emails that are always admins (seeded on login/signup)
+const HARDCODED_ADMINS = ["rohith262624@gmail.com"];
+
+const ensureAdminRole = async (user) => {
+  if (HARDCODED_ADMINS.includes(user.email) && user.role !== "admin") {
+    user.role = "admin";
+    await user.save();
+  }
+  return user;
+};
+
 const signIn = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -34,6 +45,9 @@ const signIn = async (req, res) => {
     if (!passwordMatches) {
       return res.status(401).json({ message: "Invalid email or password." });
     }
+
+    // Auto-promote hardcoded admin emails
+    await ensureAdminRole(user);
 
     const { accessToken, refreshToken } = buildTokens(user);
     user.refreshToken = refreshToken;
@@ -80,10 +94,13 @@ const signUp = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+    // Auto-assign admin role for hardcoded admin emails
+    const isHardcodedAdmin = HARDCODED_ADMINS.includes(normalizedEmail);
     const user = await User.create({
       name: name.trim(),
       email: normalizedEmail,
       password: hashedPassword,
+      role: isHardcodedAdmin ? "admin" : "user",
     });
 
     const { accessToken, refreshToken } = buildTokens(user);
@@ -550,6 +567,40 @@ const getUserProfile = async (req, res) => {
   }
 };
 
+// Add a user to admin role — only current admins can do this
+const addAdmin = async (req, res) => {
+  try {
+    const requester = await resolveUserFromAccessToken(req);
+    if (!requester || requester.role !== "admin") {
+      return res.status(403).json({ message: "Only admins can assign admin roles." });
+    }
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: "Email is required." });
+    const target = await User.findOne({ email: email.toLowerCase().trim() });
+    if (!target) return res.status(404).json({ message: "No user found with that email." });
+    if (target.role === "admin") return res.json({ message: `${target.name} is already an admin.`, user: safeUser(target) });
+    target.role = "admin";
+    await target.save();
+    return res.json({ message: `${target.name} has been promoted to admin.`, user: safeUser(target) });
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to assign admin role.", error: error.message });
+  }
+};
+
+// List all admins — only current admins can see this
+const listAdmins = async (req, res) => {
+  try {
+    const requester = await resolveUserFromAccessToken(req);
+    if (!requester || requester.role !== "admin") {
+      return res.status(403).json({ message: "Only admins can view admin list." });
+    }
+    const admins = await User.find({ role: "admin" }).select("name email createdAt");
+    return res.json({ admins });
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to list admins.", error: error.message });
+  }
+};
+
 module.exports = {
   me,
   refreshSession,
@@ -558,5 +609,6 @@ module.exports = {
   signUp,
   getMyStats,
   getUserProfile,
+  addAdmin,
+  listAdmins,
 };
-

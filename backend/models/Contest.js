@@ -2,8 +2,21 @@ const mongoose = require("mongoose");
 
 const testCaseSchema = new mongoose.Schema(
   {
-    input: { type: String, required: true, trim: true },
+    // input can be empty string (problems with no stdin)
+    input: { type: String, default: "", trim: false },
     expectedOutput: { type: String, required: true, trim: true },
+  },
+  { _id: false }
+);
+
+// 5 cognitive skill ratings (0-100) — settable by admins
+const cognitiveRatingsSchema = new mongoose.Schema(
+  {
+    patternRecognition:    { type: Number, default: 0, min: 0, max: 100 },
+    optimizationAbility:   { type: Number, default: 0, min: 0, max: 100 },
+    mathematicalReasoning: { type: Number, default: 0, min: 0, max: 100 },
+    logicFlowDebugging:    { type: Number, default: 0, min: 0, max: 100 },
+    memoryComplexity:      { type: Number, default: 0, min: 0, max: 100 },
   },
   { _id: false }
 );
@@ -20,6 +33,7 @@ const questionSchema = new mongoose.Schema(
     topics: { type: [String], default: [] },
     tags: { type: [String], default: [] },
     points: { type: Number, default: 100 },
+    cognitiveRatings: { type: cognitiveRatingsSchema, default: () => ({}) },
     // If linked to a Problem document (added from problem library)
     problemRef: { type: mongoose.Schema.Types.ObjectId, ref: "Problem", default: null },
     testCases: {
@@ -85,6 +99,7 @@ const contestSchema = new mongoose.Schema(
       required: true,
     },
     participants: { type: [participantSchema], default: [] },
+    invitedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     leaderboard: { type: [leaderboardEntrySchema], default: [] },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     registrationOpen: { type: Boolean, default: true },

@@ -2,6 +2,7 @@ const crypto = require("crypto");
 const Contest = require("../models/Contest");
 const Problem = require("../models/Problem");
 const Submission = require("../models/Submission");
+const User = require("../models/User");
 const { resolveUserFromAccessToken } = require("../services/authSession");
 const { SUPPORTED_LANGUAGES, runCodeAgainstTestCases } = require("../services/codeRunner");
 const { updateRatingsForContest } = require("../services/ratingService");
@@ -70,11 +71,14 @@ const normalizeQuestions = (questions) =>
       topics: topics.map((t) => t?.trim()).filter(Boolean),
       tags: tags.map((t) => t?.trim()).filter(Boolean),
       points: Number(question.points) || 100,
+      // Preserve cognitiveRatings if provided (admin-set)
+      cognitiveRatings: question.cognitiveRatings || {},
       problemRef: question.problemRef || null,
       testCases: Array.isArray(question.testCases)
         ? question.testCases.map((testCase) => ({
-            input: testCase.input?.trim(),
-            expectedOutput: testCase.expectedOutput?.trim(),
+            // allow empty string input (no-stdin problems)
+            input: testCase.input ?? "",
+            expectedOutput: testCase.expectedOutput?.trim() ?? "",
           }))
         : [],
     };
@@ -275,12 +279,20 @@ const createContest = async (req, res) => {
       durationMinutes,
       questions,
       scheduledAt,
+      startNow = false, // true = start immediately as live
       isOfficial = false,
-      existingProblemIds = [], // array of Problem IDs to add from library
+      existingProblemIds = [],
     } = req.body;
 
     if (!title || !durationMinutes) {
       return res.status(400).json({ message: "Title and duration are required." });
+    }
+
+    // Role Rule: Public contests can only be created by admins
+    if (visibility === "public" && creator.role !== "admin") {
+      return res.status(403).json({
+        message: "Only administrators can create public contests. Regular users can create private contests and invite their friends.",
+      });
     }
 
     // Build questions array: merge inline questions + existing problems
@@ -298,10 +310,11 @@ const createContest = async (req, res) => {
         tags: p.tags || [],
         topics: p.topics || [],
         points: p.difficulty === "hard" ? 300 : p.difficulty === "medium" ? 200 : 100,
+        cognitiveRatings: p.cognitiveRatings || {},
         problemRef: p._id,
         testCases: (p.testCases || []).map((tc) => ({
-          input: tc.input?.trim(),
-          expectedOutput: tc.expectedOutput?.trim(),
+          input: tc.input ?? "",
+          expectedOutput: tc.expectedOutput?.trim() ?? "",
         })),
       }));
       builtQuestions.push(...problemQuestions);
@@ -317,8 +330,31 @@ const createContest = async (req, res) => {
     }
 
     const roomCode = await generateContestCode();
-    const status = scheduledAt ? "scheduled" : "ready";
-    // Only admins can create official contests
+    // startNow → go live immediately; scheduledAt → future scheduled; else → ready
+    const now = new Date();
+    let status, actualStartAt, actualEndAt, endAt, scheduledAtDate;
+
+    if (startNow) {
+      status = "live";
+      actualStartAt = now;
+      actualEndAt = new Date(now.getTime() + Number(durationMinutes) * 60 * 1000);
+      endAt = actualEndAt;
+      scheduledAtDate = null;
+    } else if (scheduledAt) {
+      status = "scheduled";
+      actualStartAt = null;
+      actualEndAt = null;
+      endAt = null;
+      scheduledAtDate = new Date(scheduledAt);
+    } else {
+      status = "ready";
+      actualStartAt = null;
+      actualEndAt = null;
+      endAt = null;
+      scheduledAtDate = null;
+    }
+
+    // Only admins can create official rated contests
     const canBeOfficial = creator.role === "admin" && isOfficial;
 
     const contest = await Contest.create({
@@ -328,12 +364,38 @@ const createContest = async (req, res) => {
       visibility,
       status,
       isOfficial: canBeOfficial,
-      scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
+      scheduledAt: scheduledAtDate,
+      actualStartAt,
+      actualEndAt,
+      endAt,
       durationMinutes: Number(durationMinutes),
       questions: normalizeQuestions(builtQuestions),
       participants: [{ user: creator._id }],
       createdBy: creator._id,
     });
+
+    // If started immediately, schedule auto-end
+    if (startNow && actualEndAt) {
+      const endDelay = actualEndAt.getTime() - Date.now();
+      if (endDelay > 0) {
+        const contestIdStr = contest._id.toString();
+        setTimeout(async () => {
+          try {
+            const liveContest = await Contest.findById(contestIdStr);
+            if (!liveContest || liveContest.status !== "live") return;
+            liveContest.status = "ended";
+            liveContest.actualEndAt = new Date();
+            await liveContest.save();
+            await recomputeLeaderboard(liveContest._id);
+            if (liveContest.isOfficial) {
+              updateRatingsForContest(liveContest._id).catch(() => {});
+            }
+          } catch (e) {
+            console.error("[scheduler] Auto-end error (startNow):", e.message);
+          }
+        }, endDelay);
+      }
+    }
 
     // Schedule auto-start if contest is scheduled for future
     if (status === "scheduled") {
@@ -371,9 +433,12 @@ const joinContest = async (req, res) => {
     }
 
     const isOrganizer = contest.createdBy._id.toString() === user._id.toString();
+    const isInvited = Array.isArray(contest.invitedUsers) && contest.invitedUsers.some(
+      (u) => (u?._id?.toString() || u?.toString()) === user._id.toString()
+    );
 
-    if (contest.visibility === "private" && !code && !isOrganizer) {
-      return res.status(400).json({ message: "A private contest requires a room code." });
+    if (contest.visibility === "private" && !code && !isOrganizer && !isInvited) {
+      return res.status(400).json({ message: "A private contest requires a room code or an invite from the organizer." });
     }
 
     const participantExists = contest.participants.some(
@@ -381,10 +446,7 @@ const joinContest = async (req, res) => {
     );
 
     if (!participantExists) {
-      if (contest.status === "live" && !isOrganizer) {
-        return res.status(403).json({ message: "The contest has already started. New participants cannot join." });
-      }
-      // Allow joining ended contests for upsolving (no leaderboard contribution)
+      // In LeetCode/Codeforces, any participant can join and attempt a live contest!
       contest.participants.push({ user: user._id });
       await contest.save();
     }
@@ -393,6 +455,63 @@ const joinContest = async (req, res) => {
     return res.json({ message: "Joined contest successfully.", contest: refreshedContest });
   } catch (error) {
     return res.status(500).json({ message: "Unable to join contest.", error: error.message });
+  }
+};
+
+const inviteToContest = async (req, res) => {
+  try {
+    const user = await resolveContestUser(req);
+    const contest = await getContestOr404(req.params.contestId, res);
+    if (!contest) return null;
+
+    if (!user) {
+      return res.status(401).json({ message: "Please sign in." });
+    }
+
+    const isOrganizer = contest.createdBy._id.toString() === user._id.toString();
+    if (!isOrganizer && user.role !== "admin") {
+      return res.status(403).json({ message: "Only the contest organizer or an admin can invite friends." });
+    }
+
+    const { targetUserId, userId, identifier } = req.body;
+    let targetUser = null;
+    const lookupId = targetUserId || userId;
+
+    if (lookupId) {
+      targetUser = await User.findById(lookupId);
+    } else if (identifier) {
+      const trimmed = identifier.trim();
+      targetUser = await User.findOne({
+        $or: [
+          { email: trimmed.toLowerCase() },
+          { name: trimmed },
+        ],
+      });
+    }
+
+    if (!targetUser) {
+      return res.status(404).json({ message: "User not found to invite." });
+    }
+
+    if (!Array.isArray(contest.invitedUsers)) contest.invitedUsers = [];
+    const alreadyInvited = contest.invitedUsers.some(
+      (id) => (id?._id?.toString() || id?.toString()) === targetUser._id.toString()
+    );
+
+    if (alreadyInvited) {
+      return res.status(400).json({ message: `${targetUser.name} is already invited to this contest.` });
+    }
+
+    contest.invitedUsers.push(targetUser._id);
+    await contest.save();
+
+    return res.json({
+      message: `Successfully invited ${targetUser.name} to the contest!`,
+      invitedUser: { id: targetUser._id, name: targetUser.name, email: targetUser.email },
+      invitedCount: contest.invitedUsers.length,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: "Unable to invite friend.", error: error.message });
   }
 };
 
@@ -507,11 +626,14 @@ const getLeaderboard = async (req, res) => {
       contestTitle: contest.title,
       contestStatus: contest.status,
       isOfficial: contest.isOfficial,
+      contestStart: contest.actualStartAt || contest.startAt || null,
+      durationMinutes: contest.durationMinutes,
       questions: contest.questions.map((q, i) => ({
         index: i,
         title: q.title,
         points: q.points || 100,
         difficulty: q.difficulty,
+        cognitiveRatings: q.cognitiveRatings || {},
       })),
     });
   } catch (error) {
@@ -687,4 +809,5 @@ module.exports = {
   runContestCode,
   startContest,
   startVirtualContest,
+  inviteToContest,
 };

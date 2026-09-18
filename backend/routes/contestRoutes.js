@@ -11,6 +11,7 @@ const {
   runContestCode,
   startContest,
   startVirtualContest,
+  inviteToContest,
 } = require("../controllers/contestController");
 const { checkRateLimit } = require("../middleware/rateLimiter");
 
@@ -21,6 +22,7 @@ router.get("/:contestId", getContest);
 router.get("/:contestId/submissions", getSubmissions);
 router.get("/:contestId/leaderboard", getLeaderboard);
 router.post("/:contestId/enter", enterContest);
+router.post("/:contestId/invite", inviteToContest);
 router.post("/:contestId/run", checkRateLimit("code_run", 60, 600), runContestCode);
 router.post("/:contestId/start", startContest);
 router.post("/:contestId/end", endContest);

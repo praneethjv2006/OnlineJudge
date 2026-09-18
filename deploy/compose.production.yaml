@@ -1,0 +1,62 @@
+services:
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${TUNNEL_TOKEN:?Set TUNNEL_TOKEN in .env}
+    networks:
+      - internal
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  backend:
+    build:
+      context: ../backend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      TRUST_PROXY: "true"
+      COMPILER_SERVICE_URL: http://compiler:5001
+    expose:
+      - "5000"
+    networks:
+      - internal
+      - outbound
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    mem_limit: 512m
+    cpus: "0.50"
+    pids_limit: 128
+
+  compiler:
+    build:
+      context: ../compiler
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 5001
+    expose:
+      - "5001"
+    networks:
+      - internal
+    read_only: true
+    tmpfs:
+      - /app/temp:rw,noexec,nosuid,size=64m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    mem_limit: 512m
+    memswap_limit: 512m
+    cpus: "1.00"
+    pids_limit: 64
+
+networks:
+  internal:
+    internal: true
+  outbound:

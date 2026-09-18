@@ -7,7 +7,8 @@ import {
   loadContestLeaderboard,
   runContestCode, 
   startContest,
-  endContest
+  endContest,
+  inviteToContest
 } from "../services/contestService";
 import { analyzeCode } from "../services/problemService";
 import Editor from "@monaco-editor/react";
@@ -36,7 +37,10 @@ import {
   Wand2,
   X,
   Monitor,
-  Medal
+  Medal,
+  UserPlus,
+  Copy,
+  Check
 } from "lucide-react";
 
 const LANGUAGE_OPTIONS = [
@@ -93,28 +97,40 @@ const formatCountdown = (dateValue, referenceTime = Date.now()) => {
 };
 
 // ─── Inline Leaderboard Tab ──────────────────────────────────────────────────
-function LeaderboardTab({ contestId, currentUserId, questions = [] }) {
+function LeaderboardTab({ contestId, currentUserId, questions = [], contestStatus = "live" }) {
   const [leaderboard, setLeaderboard] = useState([]);
+  const [questionMeta, setQuestionMeta] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshIn, setRefreshIn] = useState(30);
+  const [search, setSearch] = useState("");
+
+  const fetchLeaderboard = useCallback(async () => {
+    try {
+      const data = await loadContestLeaderboard(contestId);
+      setLeaderboard(data.leaderboard || []);
+      setQuestionMeta(data.questions || []);
+      setRefreshIn(30);
+    } catch {
+      // silent
+    } finally {
+      setIsLoading(false);
+    }
+  }, [contestId]);
 
   useEffect(() => {
-    let mounted = true;
-    const fetch = async () => {
-      setIsLoading(true);
-      try {
-        const data = await loadContestLeaderboard(contestId);
-        if (mounted) setLeaderboard(data.leaderboard || []);
-      } catch {
-        // silent fail
-      } finally {
-        if (mounted) setIsLoading(false);
-      }
-    };
-    fetch();
-    // Refresh leaderboard every 30s during live contest
-    const interval = setInterval(fetch, 30000);
-    return () => { mounted = false; clearInterval(interval); };
-  }, [contestId]);
+    fetchLeaderboard();
+    if (contestStatus === "live") {
+      const iv = setInterval(fetchLeaderboard, 30000);
+      const countdown = setInterval(() => setRefreshIn((n) => (n > 0 ? n - 1 : 30)), 1000);
+      return () => { clearInterval(iv); clearInterval(countdown); };
+    }
+  }, [fetchLeaderboard, contestStatus]);
+
+  const qs = questionMeta.length > 0 ? questionMeta : questions.map((q, i) => ({ index: i, title: q.title, points: q.points || 100, difficulty: q.difficulty }));
+
+  const filtered = leaderboard.filter((e) =>
+    !search || (e.userName || "").toLowerCase().includes(search.toLowerCase())
+  );
 
   if (isLoading) return (
     <div className="lb-inline-loading"><Loader2 size={20} className="anim-spin" /><span>Loading standings...</span></div>
@@ -124,26 +140,103 @@ function LeaderboardTab({ contestId, currentUserId, questions = [] }) {
     <div className="lb-inline-empty"><Trophy size={32} style={{ opacity: 0.15 }} /><p>No submissions yet</p></div>
   );
 
+  const medalColor = (rank) => {
+    if (rank === 1) return "#fbbf24";
+    if (rank === 2) return "#d1d5db";
+    if (rank === 3) return "#cd7f32";
+    return null;
+  };
+
   return (
-    <div className="lb-inline">
-      <div className="lb-inline-header">
-        <Trophy size={14} style={{ color: "var(--accent)" }} />
-        <span>Live Standings</span>
-        <span className="lb-auto-refresh">auto-refresh 30s</span>
+    <div className="lb-matrix-wrapper">
+      {/* Header */}
+      <div className="lb-matrix-header">
+        <div className="lb-header-left">
+          <Trophy size={14} style={{ color: "var(--accent)" }} />
+          <span>Live Standings</span>
+          {contestStatus === "live" && (
+            <span className="lb-live-dot">🟢 Live</span>
+          )}
+        </div>
+        <div className="lb-header-right">
+          {contestStatus === "live" && (
+            <span className="lb-refresh-badge">Refreshes in {refreshIn}s</span>
+          )}
+          <button className="lb-refresh-btn" onClick={fetchLeaderboard} title="Refresh now">
+            <RotateCcw size={12} />
+          </button>
+          <input
+            className="lb-search"
+            placeholder="Search..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
       </div>
-      <div className="lb-inline-list">
-        {leaderboard.map((entry, idx) => {
-          const isMe = entry.user?.toString() === currentUserId?.toString();
-          return (
-            <div key={entry.user || idx} className={`lb-inline-row ${isMe ? "lb-inline-me" : ""}`}>
-              <span className="lb-inline-rank">#{entry.rank || idx + 1}</span>
-              <div className="lb-inline-avatar">{(entry.userName || "U")[0]}</div>
-              <span className="lb-inline-name">{entry.userName}{isMe && " (You)"}</span>
-              <span className="lb-inline-score">{entry.score}pt</span>
-              <span className="lb-inline-solved">{entry.questionsSolved}/{questions.length}</span>
-            </div>
-          );
-        })}
+
+      {/* Matrix Table */}
+      <div className="lb-matrix-scroll">
+        <table className="lb-matrix-table">
+          <thead>
+            <tr>
+              <th className="lb-col-rank">#</th>
+              <th className="lb-col-name">Participant</th>
+              <th className="lb-col-score">Score</th>
+              {qs.map((q, i) => (
+                <th key={i} className="lb-col-prob" title={q.title}>
+                  {i + 1}
+                </th>
+              ))}
+              <th className="lb-col-penalty">Pen.</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((entry, idx) => {
+              const rank = entry.rank || idx + 1;
+              const isMe = String(entry.user) === String(currentUserId);
+              const mc = medalColor(rank);
+              return (
+                <tr key={entry.user || idx} className={`lb-row ${isMe ? "lb-row-me" : ""}`}>
+                  <td className="lb-col-rank">
+                    {mc ? (
+                      <Medal size={16} style={{ color: mc }} />
+                    ) : (
+                      <span className="lb-rank-num">{rank}</span>
+                    )}
+                  </td>
+                  <td className="lb-col-name">
+                    <div className="lb-name-cell">
+                      <div className="lb-avatar">{(entry.userName || "U")[0]}</div>
+                      <span>{entry.userName}{isMe && <span className="lb-you"> (You)</span>}</span>
+                    </div>
+                  </td>
+                  <td className="lb-col-score">{entry.score || 0}</td>
+                  {qs.map((q, qi) => {
+                    const qr = entry.questionResults?.[String(qi)];
+                    if (!qr) return <td key={qi} className="lb-prob-cell lb-prob-unsolved">—</td>;
+                    if (qr.solved) {
+                      const mins = qr.penaltyMinutes || 0;
+                      const h = Math.floor(mins / 60);
+                      const m = mins % 60;
+                      const timeStr = h > 0 ? `${h}:${String(m).padStart(2, "0")}` : `${m}:00`;
+                      return (
+                        <td key={qi} className="lb-prob-cell lb-prob-solved">
+                          <span className="lb-solve-time">+{qr.attempts > 1 ? qr.attempts - 1 : ""}{timeStr}</span>
+                        </td>
+                      );
+                    }
+                    return (
+                      <td key={qi} className="lb-prob-cell lb-prob-failed">
+                        <span className="lb-fail-count">-{qr.attempts}</span>
+                      </td>
+                    );
+                  })}
+                  <td className="lb-col-penalty">{entry.penalty || 0}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -176,6 +269,12 @@ function ContestRoomPage() {
   const [isConfirmStartOpen, setIsConfirmStartOpen] = useState(false);
   const [isConfirmEndOpen, setIsConfirmEndOpen] = useState(false);
   const [isConfirmResetOpen, setIsConfirmResetOpen] = useState(false);
+
+  // Invite modal state
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [inviteIdentifier, setInviteIdentifier] = useState("");
+  const [isInviting, setIsInviting] = useState(false);
+  const [copiedRoomCode, setCopiedRoomCode] = useState(false);
 
   // Analyze state
   const [isAnalyzeOpen, setIsAnalyzeOpen] = useState(false);
@@ -469,6 +568,21 @@ function ContestRoomPage() {
     }
   };
 
+  const handleInviteFriend = async (e) => {
+    e?.preventDefault?.();
+    if (!inviteIdentifier.trim()) return;
+    setIsInviting(true);
+    try {
+      const res = await inviteToContest(contestId, { identifier: inviteIdentifier.trim() });
+      toast.success(res.message || "Friend invited successfully!");
+      setInviteIdentifier("");
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Failed to send contest invite."));
+    } finally {
+      setIsInviting(false);
+    }
+  };
+
   if (isLoading) return (
     <div className="contest-workspace-root workspace-skeleton">
       <div className="workspace-header skeleton-header">
@@ -564,6 +678,15 @@ function ContestRoomPage() {
                 )}
               </>
             )}
+            {(contest?.createdBy?._id === user?.id || contest?.visibility === "private" || user?.role === "admin") && (
+              <button 
+                className="btn-invite-room" 
+                onClick={() => setIsInviteModalOpen(true)}
+                title="Invite friends or copy room code"
+              >
+                <UserPlus size={14} /> Invite
+              </button>
+            )}
             <button 
               className={`btn-run ${isRunning ? 'loading' : ''}`} 
               onClick={handleRunTestCases} 
@@ -632,6 +755,60 @@ function ContestRoomPage() {
           </div>
         </div>
       )}
+
+      {/* Invite Friends Modal */}
+      <Modal
+        isOpen={isInviteModalOpen}
+        onClose={() => setIsInviteModalOpen(false)}
+        title="Invite Friends to Contest"
+      >
+        <div className="invite-modal-content">
+          <div className="invite-code-card">
+            <span className="invite-code-label">Contest Room Code</span>
+            <div className="invite-code-val-row">
+              <span className="invite-code-val">{contest?.roomCode || contest?._id}</span>
+              <button
+                type="button"
+                className="invite-copy-btn"
+                onClick={() => {
+                  navigator.clipboard.writeText(contest?.roomCode || contest?._id);
+                  setCopiedRoomCode(true);
+                  setTimeout(() => setCopiedRoomCode(false), 2000);
+                  toast.success("Room code copied to clipboard!");
+                }}
+              >
+                {copiedRoomCode ? <Check size={14} color="#22c55e" /> : <Copy size={14} />}
+                <span>{copiedRoomCode ? "Copied" : "Copy Code"}</span>
+              </button>
+            </div>
+          </div>
+
+          <form onSubmit={handleInviteFriend} className="invite-user-form">
+            <label className="invite-form-label">Invite Friend by Username or Email</label>
+            <div className="invite-input-row">
+              <input
+                type="text"
+                className="invite-input"
+                placeholder="Enter username or email..."
+                value={inviteIdentifier}
+                onChange={(e) => setInviteIdentifier(e.target.value)}
+                disabled={isInviting}
+              />
+              <button
+                type="submit"
+                className="primary-button invite-submit-btn"
+                disabled={isInviting || !inviteIdentifier.trim()}
+              >
+                {isInviting ? <Loader2 size={15} className="anim-spin" /> : <UserPlus size={14} />}
+                <span>Invite</span>
+              </button>
+            </div>
+            <p className="invite-hint-text">
+              Invited participants gain immediate access to enter this contest room.
+            </p>
+          </form>
+        </div>
+      </Modal>
 
       {/* Confirmation Modals */}
       <Modal
@@ -817,7 +994,7 @@ function ContestRoomPage() {
                   ))}
                 </div>
               ) : leftTab === 'leaderboard' ? (
-                <LeaderboardTab contestId={contestId} currentUserId={user?.id || user?._id} questions={contest.questions} />
+                <LeaderboardTab contestId={contestId} currentUserId={user?.id || user?._id} questions={contest.questions} contestStatus={contest.status} />
               ) : (
                 <div className="submissions-view">
                   <h3 className="section-title">My Submissions</h3>

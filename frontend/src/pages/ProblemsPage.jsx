@@ -113,14 +113,22 @@ function ProblemsPage() {
       prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
     );
 
-  const isAuthor = (problem) => {
-    if (!user || !problem.createdBy) return false;
-    const authorId = problem.createdBy._id || problem.createdBy;
+  const isAdmin = user?.role === "admin";
+
+  const canEditProblem = (problem) => {
+    if (!user) return false;
+    // Admins can edit any problem; others cannot create/edit
+    if (isAdmin) return true;
+    const authorId = problem.createdBy?._id || problem.createdBy;
     return String(user.id || user._id) === String(authorId);
   };
 
   const openCreateEditor = () => {
-    if (!user) { toast.info("Sign in to publish a problem."); navigate("/auth"); return; }
+    if (!user) { toast.info("Sign in to create a problem."); navigate("/auth"); return; }
+    if (!isAdmin) {
+      toast.error("Only administrators can create problems.");
+      return;
+    }
     if (apiFeatures && !apiFeatures.structuredProblems) {
       toast.error("Render is still running the old backend. Redeploy the latest main commit first.");
       return;
@@ -209,9 +217,11 @@ function ProblemsPage() {
             <h1>Problemset</h1>
             <p>Choose a challenge, write a solution, and sharpen your competitive programming skills.</p>
           </div>
-          <button className="problem-create-button" onClick={openCreateEditor}>
-            <Plus size={18} /> Create problem
-          </button>
+          {isAdmin && (
+            <button className="problem-create-button" onClick={openCreateEditor}>
+              <Plus size={18} /> Create problem
+            </button>
+          )}
         </header>
 
         {/* Search + Filter Toggle */}
@@ -416,12 +426,12 @@ function ProblemsPage() {
                             <span>{problem.createdBy?.name?.charAt(0) || "U"}</span>
                             <div>
                               <strong>{problem.createdBy?.name || "Unknown"}</strong>
-                              {isAuthor(problem) && <small>You</small>}
+                              {canEditProblem(problem) && <small>You</small>}
                             </div>
                           </div>
                         </td>
                         <td>
-                          {isAuthor(problem) ? (
+                          {canEditProblem(problem) ? (
                             <div className="problem-row-actions">
                               <button
                                 className="problem-edit-btn"

@@ -164,6 +164,11 @@ const createProblem = async (req, res) => {
       return res.status(401).json({ message: "Please sign in to create a problem." });
     }
 
+    // Only admins can create problems
+    if (user.role !== "admin") {
+      return res.status(403).json({ message: "Only administrators can create problems. Contact an admin to add problems to the library." });
+    }
+
     const problemData = normalizeProblemInput(req.body);
     const validationError = validateProblemInput(problemData);
     if (validationError) {
@@ -191,17 +196,26 @@ const updateProblem = async (req, res) => {
       return res.status(404).json({ message: "Problem not found." });
     }
 
-    const problem = await Problem.findOne({
-      _id: req.params.id,
-      createdBy: user._id,
-    });
-    if (!problem) {
-      const problemExists = await Problem.exists({ _id: req.params.id });
-      return res.status(problemExists ? 403 : 404).json({
-        message: problemExists
-          ? "Only the problem author can edit this problem."
-          : "Problem not found.",
+    let problem;
+    if (user.role === "admin") {
+      // Admins can edit any problem
+      problem = await Problem.findById(req.params.id);
+      if (!problem) {
+        return res.status(404).json({ message: "Problem not found." });
+      }
+    } else {
+      problem = await Problem.findOne({
+        _id: req.params.id,
+        createdBy: user._id,
       });
+      if (!problem) {
+        const problemExists = await Problem.exists({ _id: req.params.id });
+        return res.status(problemExists ? 403 : 404).json({
+          message: problemExists
+            ? "Only admins or the problem author can edit this problem."
+            : "Problem not found.",
+        });
+      }
     }
 
     const problemData = normalizeProblemInput(req.body);

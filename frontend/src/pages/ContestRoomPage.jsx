@@ -306,13 +306,24 @@ function ContestRoomPage() {
     const fetchContest = async () => {
       setIsLoading(true);
       try {
-        const data = await loadContest(contestId);
+        // Auto-enter/join the contest so the user is a registered participant
+        // (backend is idempotent — calling twice just returns the same contest)
+        const data = await enterContest(contestId);
         if (isMounted) {
           setContest(data.contest);
           setSelectedQuestionIndex(0);
         }
       } catch (err) {
-        if (isMounted) setError(getErrorMessage(err, "Failed to load contest."));
+        // If entering fails (e.g. private contest w/o code), fall back to just viewing
+        try {
+          const data = await loadContest(contestId);
+          if (isMounted) {
+            setContest(data.contest);
+            setSelectedQuestionIndex(0);
+          }
+        } catch (innerErr) {
+          if (isMounted) setError(getErrorMessage(innerErr, "Failed to load contest."));
+        }
       } finally {
         if (isMounted) setIsLoading(false);
       }

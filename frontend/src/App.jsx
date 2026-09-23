@@ -191,13 +191,13 @@ function AppRoutes() {
         <Route path="/problems/:problemId" element={<ProblemSolvingPage />} />
         <Route path="/shadow-code" element={<ShadowCodePage />} />
         <Route path="/shadow-code/dojo" element={<ShadowDojoPage />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
 
         {/* Auth-guarded routes — context is forwarded through ProtectedRoute */}
         <Route element={<ProtectedRoute user={user} />}>
           <Route path="/contests" element={<ContestsPage />} />
           <Route path="/contests/create" element={<CreateContestPage />} />
           <Route path="/contests/:contestId" element={<ContestRoomPage />} />
-          <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/friends" element={<FriendsPage />} />
           <Route path="/messages" element={<MessagesPage />} />
           <Route path="/profile/:userId" element={<FriendProfilePage />} />

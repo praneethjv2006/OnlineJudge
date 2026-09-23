@@ -210,19 +210,14 @@ function ProblemsPage() {
   return (
     <main className="app-main">
       <div className="page-stack">
-        {/* Header */}
-        <header className="problemset-header">
-          <div>
-            <span className="problemset-eyebrow">Practice library</span>
-            <h1>Problemset</h1>
-            <p>Choose a challenge, write a solution, and sharpen your competitive programming skills.</p>
-          </div>
-          {isAdmin && (
+        {/* Admin Create Action (if admin) */}
+        {isAdmin && (
+          <header className="problemset-header" style={{ justifyContent: "flex-end", padding: "0 0 10px" }}>
             <button className="problem-create-button" onClick={openCreateEditor}>
               <Plus size={18} /> Create problem
             </button>
-          )}
-        </header>
+          </header>
+        )}
 
         {/* Search + Filter Toggle */}
         <div className="problemset-toolbar">

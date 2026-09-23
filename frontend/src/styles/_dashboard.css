@@ -1989,5 +1989,104 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+/* ─── Guest Dashboard Banner ────────────────────────── */
+.guest-dashboard-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  background: linear-gradient(135deg, rgba(255, 161, 22, 0.08) 0%, rgba(56, 189, 248, 0.04) 100%), #121824;
+  border: 1px solid rgba(255, 161, 22, 0.28);
+  border-radius: 18px;
+  padding: 18px 24px;
+  margin-bottom: 20px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  animation: guestBannerFade 0.4s ease-out;
+}
+
+@keyframes guestBannerFade {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.guest-dashboard-banner-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+}
+
+.guest-dashboard-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(255, 161, 22, 0.15);
+  border: 1px solid rgba(255, 161, 22, 0.35);
+  color: #ffa116;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.guest-dashboard-text h4 {
+  margin: 0 0 4px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.01em;
+}
+
+.guest-dashboard-text p {
+  margin: 0;
+  font-size: 0.86rem;
+  color: #94a3b8;
+  line-height: 1.5;
+}
+
+.guest-dashboard-text p strong {
+  color: #ffa116;
+}
+
+.guest-dashboard-actions {
+  flex-shrink: 0;
+}
+
+.guest-dashboard-login-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #ffa116, #ff7b00);
+  color: #0b0f19;
+  font-weight: 700;
+  font-size: 0.88rem;
+  padding: 10px 20px;
+  border-radius: 12px;
+  text-decoration: none;
+  box-shadow: 0 4px 16px rgba(255, 161, 22, 0.28);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.guest-dashboard-login-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 22px rgba(255, 161, 22, 0.42);
+  color: #000;
+}
+
+@media (max-width: 768px) {
+  .guest-dashboard-banner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .guest-dashboard-actions {
+    width: 100%;
+  }
+  .guest-dashboard-login-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
 
 

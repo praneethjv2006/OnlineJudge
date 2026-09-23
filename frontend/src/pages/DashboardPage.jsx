@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { Link } from "react-router-dom";
 import { useAppContext } from "../App";
 import { loadDashboardStats } from "../services/authService";
 import { getErrorMessage } from "../services/api";
@@ -19,7 +20,9 @@ import {
   Star,
   BarChart3,
   TrendingUp,
-  CheckCircle2
+  CheckCircle2,
+  Sparkles,
+  LogIn
 } from "lucide-react";
 
 const getMonthName = (monthIndex) => {
@@ -132,6 +135,26 @@ function RankLadderModal({ isOpen, onClose, overallRating = 0, currentTier = {} 
   );
 }
 
+const GUEST_STATS = {
+  user: {
+    name: "Guest User",
+    email: "Sign in to track progress",
+    createdAt: null,
+  },
+  totalSolved: 0,
+  submissions: [],
+  skillMetadata: {
+    overallRating: 0,
+    tier: "Novice",
+  },
+  performanceRatings: {
+    solvingSpeed: { percentage: 0, rating: 0, score: 0, tier: "Unranked" },
+    codeQuality: { percentage: 0, rating: 0, score: 0, tier: "Unranked" },
+    optimizationAbility: { percentage: 0, rating: 0, score: 0, tier: "Unranked" },
+    memoryEfficiency: { percentage: 0, rating: 0, score: 0, tier: "Unranked" },
+  },
+};
+
 function DashboardPage() {
   const { user: sessionUser } = useAppContext();
   const [stats, setStats] = useState(null);
@@ -143,6 +166,12 @@ function DashboardPage() {
 
   useEffect(() => {
     let isMounted = true;
+    if (!sessionUser) {
+      setStats(GUEST_STATS);
+      setIsLoading(false);
+      return;
+    }
+
     const fetchStats = async () => {
       try {
         const data = await loadDashboardStats();
@@ -161,7 +190,7 @@ function DashboardPage() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [sessionUser]);
 
   if (isLoading) {
     return (
@@ -347,18 +376,46 @@ function DashboardPage() {
 
   return (
     <section className="page-stack dashboard-page">
+      {/* Guest Mode Callout Banner */}
+      {!sessionUser && (
+        <div className="guest-dashboard-banner">
+          <div className="guest-dashboard-banner-content">
+            <div className="guest-dashboard-icon-wrap">
+              <Sparkles size={22} />
+            </div>
+            <div className="guest-dashboard-text">
+              <h4>Viewing Dashboard as Guest</h4>
+              <p>
+                All statistics, ratings, streaks, and submissions are set to zero. 
+                <strong> Log in</strong> or create an account to track your problem-solving progress, climb the ranks, and unlock AI performance insights.
+              </p>
+            </div>
+          </div>
+          <div className="guest-dashboard-actions">
+            <Link to="/auth" className="guest-dashboard-login-btn">
+              <LogIn size={16} />
+              <span>Login to Track Progress</span>
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* 1. TOP CARDS ROW (Profile | Overall Rating (Center) | Problems Solved (Right)) */}
       <div className="dashboard-grid-main">
         {/* Profile Details Card (Left) */}
         <div className="profile-card-premium">
           <div className="profile-avatar-large">
-            {stats?.user?.name?.[0]?.toUpperCase() || sessionUser?.name?.[0]?.toUpperCase() || "U"}
+            {sessionUser?.name?.[0]?.toUpperCase() || stats?.user?.name?.[0]?.toUpperCase() || "G"}
           </div>
           <div className="profile-info-details">
-            <h2>{stats?.user?.name || sessionUser?.name || "Developer"}</h2>
-            <p style={{ color: "#fff", opacity: 0.9 }}>{stats?.user?.email || sessionUser?.email}</p>
+            <h2>{sessionUser?.name || stats?.user?.name || "Guest User"}</h2>
+            <p style={{ color: "#fff", opacity: 0.9 }}>
+              {sessionUser?.email || stats?.user?.email || "guest@apexjudge.io"}
+            </p>
             <p style={{ fontSize: "0.8rem" }}>
-              Member since {stats?.user?.createdAt ? new Date(stats.user.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "long" }) : "June 2026"}
+              {sessionUser?.createdAt || stats?.user?.createdAt
+                ? `Member since ${new Date(sessionUser?.createdAt || stats?.user?.createdAt).toLocaleDateString("en-US", { year: "numeric", month: "long" })}`
+                : "Guest Mode (Not Logged In)"}
             </p>
           </div>
         </div>
@@ -673,7 +730,22 @@ function DashboardPage() {
         {submissions.length === 0 ? (
           <div className="empty-state" style={{ padding: "40px 0" }}>
             <h3>No submissions recorded yet.</h3>
-            <p>Enter a contest room and submit your code answers to view records.</p>
+            <p>
+              {!sessionUser
+                ? "Sign in and submit solutions in practice or contests to record your history."
+                : "Enter a contest room or solve practice problems to view your submission records."}
+            </p>
+            {!sessionUser && (
+              <div style={{ marginTop: "16px" }}>
+                <Link
+                  to="/auth"
+                  className="ghost-button"
+                  style={{ display: "inline-flex", alignItems: "center", gap: "8px", padding: "8px 18px", borderRadius: "10px" }}
+                >
+                  <LogIn size={15} /> Sign In to start solving
+                </Link>
+              </div>
+            )}
           </div>
         ) : (
           <div style={{ overflowX: "auto" }}>
